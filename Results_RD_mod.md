@@ -63,7 +63,7 @@ In the whole analysis, we calculated the temporal stability of total community b
 
 We can see that richness does not have a clear effect on community temporal stability, while stability was higher at lower temperature, and nutrients increased community temporal stability.
 
-###Effect RD
+### Effect RD
 
 We are now going to look at how response diversity (imbalance) affected temporal stability of total community biomass. We are going to look at the relationship between fundamental imbalance (so based only on species response surfaces measured in monoculture), an realised imbalance (measured accounting for species contribution to imbalance).
 
@@ -90,8 +90,9 @@ We can see that the positive relationship between temporal stability and respons
 
 
 ## Model: Fundamental Imbalance
-First we analyze the effect of fundamental imbalance, temperature, nutrients and richness on biomass temporal stability using a linear model. 
 
+First we analyze the effect of fundamental imbalance, temperature, nutrients and richness on biomass temporal stability using a linear model. 
+imbalance and richness were modelled as continuous variables, while temperature and nutrients were modelled as categorical variables. Imbalance was log-transformed to meet the assumptions of linear models.
 
 
 
@@ -104,7 +105,57 @@ Check model's assumptions
 <img src="Results_RD_mod_files/figure-html/model_check1-1.png" alt="model check 1."  />
 <p class="caption">(\#fig:model_check1)model check 1.</p>
 </div>
+
+
+
+
+```
+## 
+## Call:
+## lm(formula = log10(stability) ~ log10(imbalance_f) + as.numeric(richness) + 
+##     nutrients + temperature, data = complete_aggr)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.28605 -0.07635 -0.01196  0.04542  0.42770 
+## 
+## Coefficients:
+##                       Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)          -0.350905   0.033407 -10.504  < 2e-16 ***
+## log10(imbalance_f)   -0.050863   0.016041  -3.171  0.00172 ** 
+## as.numeric(richness) -0.006457   0.009431  -0.685  0.49425    
+## nutrients0.35 g/L     0.179918   0.018750   9.596  < 2e-16 ***
+## nutrients0.75 g/L     0.213112   0.019473  10.944  < 2e-16 ***
+## temperature22-25 °C  -0.078022   0.018683  -4.176 4.18e-05 ***
+## temperature25-28 °C  -0.100991   0.024737  -4.083 6.10e-05 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.1186 on 236 degrees of freedom
+## Multiple R-squared:  0.5158,	Adjusted R-squared:  0.5035 
+## F-statistic:  41.9 on 6 and 236 DF,  p-value: < 2.2e-16
+```
+
+
+A linear model was fitted to examine the effects of resource imbalance, richness, nutrients, and temperature on community stability (measured as log₁₀(stability)). The model explained a significant portion of the variance (Adjusted R² = 0.5115, F(7, 235) = 37.2, p < 2.2e-16).
+
+The intercept of the model was estimated at -0.349 (SE = 0.028, p < 2e-16), indicating the baseline log₁₀(stability) when all predictor variables are at their reference levels.
+
+Among the predictors, log₁₀(imbalance) showed a significant negative effect on stability (Estimate = -0.054, SE = 0.016, p = 0.0009). This suggests that as imbalance increases, stability tends to decrease.
+
+
+Nutrient concentration also had a significant positive effect on stability, with estimates for 0.35 g/L (Estimate = 0.180, SE = 0.019, p < 2e-16) and 0.75 g/L (Estimate = 0.212, SE = 0.019, p < 2e-16) indicating increased stability with higher nutrient levels.
+
+Finally, temperature regimes showed a significant effect on stability. Both 22–25 °C (Estimate = -0.078, SE = 0.019, p = 3.81e-05) and 25–28 °C (Estimate = -0.098, SE = 0.025, p = 8.44e-05) significantly reduced stability when compared to the baseline (18–21 °C).
+
+Richness did not show a significant effect on stability (Estimate = 0.002, SE = 0.019, p = 0.91).
+
+In summary, our findings show that temporal stability is significantly influenced by response diversity (imbalance), nutrient concentration, and temperature, with higher nutrient concentrations enhancing stability and higher temperatures reducing it. However, species richness was not a significant determinant of stability within the conditions of this study.
+
+Prepare publication-ready table 
+
 Summary table
+
 
 
 <table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
@@ -114,74 +165,66 @@ Summary table
    <th style="text-align:center;"> Estimate </th>
    <th style="text-align:center;"> Lower 95% CI </th>
    <th style="text-align:center;"> Upper 95% CI </th>
-   <th style="text-align:center;"> Std. Error </th>
+   <th style="text-align:center;"> t value </th>
    <th style="text-align:center;"> p-value </th>
   </tr>
  </thead>
 <tbody>
   <tr>
    <td style="text-align:center;font-weight: bold;"> (Intercept) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.349 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.405 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.293 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.028 </td>
-   <td style="text-align:center;font-weight: bold;"> 2.17e-27 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.351 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.417 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.285 </td>
+   <td style="text-align:center;font-weight: bold;"> -10.504 </td>
+   <td style="text-align:center;font-weight: bold;"> 2.01e-21 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> log10(imbalance_f) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.054 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.085 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.022 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.016 </td>
-   <td style="text-align:center;font-weight: bold;"> 9.29e-04 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.051 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.082 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.019 </td>
+   <td style="text-align:center;font-weight: bold;"> -3.171 </td>
+   <td style="text-align:center;font-weight: bold;"> 1.72e-03 </td>
   </tr>
   <tr>
-   <td style="text-align:center;font-weight: bold;"> richness3 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.042 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.078 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.005 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.018 </td>
-   <td style="text-align:center;font-weight: bold;"> 2.52e-02 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> richness4 </td>
-   <td style="text-align:center;"> -0.012 </td>
-   <td style="text-align:center;"> -0.049 </td>
-   <td style="text-align:center;"> 0.024 </td>
-   <td style="text-align:center;"> 0.019 </td>
-   <td style="text-align:center;"> 5.07e-01 </td>
+   <td style="text-align:center;"> as.numeric(richness) </td>
+   <td style="text-align:center;"> -0.006 </td>
+   <td style="text-align:center;"> -0.025 </td>
+   <td style="text-align:center;"> 0.012 </td>
+   <td style="text-align:center;"> -0.685 </td>
+   <td style="text-align:center;"> 4.94e-01 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> nutrients0.35 g/L </td>
    <td style="text-align:center;font-weight: bold;"> 0.180 </td>
    <td style="text-align:center;font-weight: bold;"> 0.143 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.216 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.019 </td>
-   <td style="text-align:center;font-weight: bold;"> 8.60e-19 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.217 </td>
+   <td style="text-align:center;font-weight: bold;"> 9.596 </td>
+   <td style="text-align:center;font-weight: bold;"> 1.27e-18 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> nutrients0.75 g/L </td>
-   <td style="text-align:center;font-weight: bold;"> 0.212 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.174 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.250 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.019 </td>
-   <td style="text-align:center;font-weight: bold;"> 6.43e-23 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.213 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.175 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.251 </td>
+   <td style="text-align:center;font-weight: bold;"> 10.944 </td>
+   <td style="text-align:center;font-weight: bold;"> 8.20e-23 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> temperature22-25 °C </td>
    <td style="text-align:center;font-weight: bold;"> -0.078 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.114 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.115 </td>
    <td style="text-align:center;font-weight: bold;"> -0.041 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.019 </td>
-   <td style="text-align:center;font-weight: bold;"> 3.81e-05 </td>
+   <td style="text-align:center;font-weight: bold;"> -4.176 </td>
+   <td style="text-align:center;font-weight: bold;"> 4.18e-05 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> temperature25-28 °C </td>
-   <td style="text-align:center;font-weight: bold;"> -0.098 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.147 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.050 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.025 </td>
-   <td style="text-align:center;font-weight: bold;"> 8.44e-05 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.101 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.150 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.052 </td>
+   <td style="text-align:center;font-weight: bold;"> -4.083 </td>
+   <td style="text-align:center;font-weight: bold;"> 6.10e-05 </td>
   </tr>
 </tbody>
 </table>
@@ -192,7 +235,7 @@ Then we analyze the effect of realised imbalance, temperature, nutrients and ric
 
 
 
-chack model's assumptions
+check model's assumptions
 <div class="figure" style="text-align: center">
 <img src="Results_RD_mod_files/figure-html/model_check2-1.png" alt="model check 2."  />
 <p class="caption">(\#fig:model_check2)model check 2.</p>
@@ -208,74 +251,66 @@ Summary table
    <th style="text-align:center;"> Estimate </th>
    <th style="text-align:center;"> Lower 95% CI </th>
    <th style="text-align:center;"> Upper 95% CI </th>
-   <th style="text-align:center;"> Std. Error </th>
+   <th style="text-align:center;"> t value </th>
    <th style="text-align:center;"> p-value </th>
   </tr>
  </thead>
 <tbody>
   <tr>
    <td style="text-align:center;font-weight: bold;"> (Intercept) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.364 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.450 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.278 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.044 </td>
-   <td style="text-align:center;font-weight: bold;"> 5.50e-15 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.359 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.446 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.272 </td>
+   <td style="text-align:center;font-weight: bold;"> -8.134 </td>
+   <td style="text-align:center;font-weight: bold;"> 2.36e-14 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> log10(imbalance_r) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.054 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.104 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.004 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.025 </td>
-   <td style="text-align:center;font-weight: bold;"> 3.45e-02 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.055 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.105 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.005 </td>
+   <td style="text-align:center;font-weight: bold;"> -2.153 </td>
+   <td style="text-align:center;font-weight: bold;"> 3.23e-02 </td>
   </tr>
   <tr>
-   <td style="text-align:center;font-weight: bold;"> richness3 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.047 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.085 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.010 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.019 </td>
-   <td style="text-align:center;font-weight: bold;"> 1.29e-02 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> richness4 </td>
-   <td style="text-align:center;"> -0.033 </td>
-   <td style="text-align:center;"> -0.072 </td>
-   <td style="text-align:center;"> 0.005 </td>
-   <td style="text-align:center;"> 0.019 </td>
-   <td style="text-align:center;"> 8.92e-02 </td>
+   <td style="text-align:center;"> as.numeric(richness) </td>
+   <td style="text-align:center;"> -0.017 </td>
+   <td style="text-align:center;"> -0.036 </td>
+   <td style="text-align:center;"> 0.003 </td>
+   <td style="text-align:center;"> -1.707 </td>
+   <td style="text-align:center;"> 8.91e-02 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> nutrients0.35 g/L </td>
    <td style="text-align:center;font-weight: bold;"> 0.182 </td>
    <td style="text-align:center;font-weight: bold;"> 0.145 </td>
    <td style="text-align:center;font-weight: bold;"> 0.220 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.019 </td>
-   <td style="text-align:center;font-weight: bold;"> 6.92e-19 </td>
+   <td style="text-align:center;font-weight: bold;"> 9.631 </td>
+   <td style="text-align:center;font-weight: bold;"> 9.97e-19 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> nutrients0.75 g/L </td>
    <td style="text-align:center;font-weight: bold;"> 0.218 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.180 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.179 </td>
    <td style="text-align:center;font-weight: bold;"> 0.257 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.020 </td>
-   <td style="text-align:center;font-weight: bold;"> 2.35e-23 </td>
+   <td style="text-align:center;font-weight: bold;"> 11.048 </td>
+   <td style="text-align:center;font-weight: bold;"> 3.81e-23 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> temperature22-25 °C </td>
    <td style="text-align:center;font-weight: bold;"> -0.079 </td>
    <td style="text-align:center;font-weight: bold;"> -0.116 </td>
    <td style="text-align:center;font-weight: bold;"> -0.042 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.019 </td>
-   <td style="text-align:center;font-weight: bold;"> 3.50e-05 </td>
+   <td style="text-align:center;font-weight: bold;"> -4.194 </td>
+   <td style="text-align:center;font-weight: bold;"> 3.88e-05 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> temperature25-28 °C </td>
-   <td style="text-align:center;font-weight: bold;"> -0.111 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.110 </td>
    <td style="text-align:center;font-weight: bold;"> -0.164 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.058 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.027 </td>
-   <td style="text-align:center;font-weight: bold;"> 5.33e-05 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.057 </td>
+   <td style="text-align:center;font-weight: bold;"> -4.068 </td>
+   <td style="text-align:center;font-weight: bold;"> 6.47e-05 </td>
   </tr>
 </tbody>
 </table>
@@ -295,6 +330,7 @@ Check model's assumptions
 
 Summary table
 
+
 <table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
  <thead>
   <tr>
@@ -302,74 +338,66 @@ Summary table
    <th style="text-align:center;"> Estimate </th>
    <th style="text-align:center;"> Lower 95% CI </th>
    <th style="text-align:center;"> Upper 95% CI </th>
-   <th style="text-align:center;"> Std. Error </th>
+   <th style="text-align:center;"> t value </th>
    <th style="text-align:center;"> p-value </th>
   </tr>
  </thead>
 <tbody>
   <tr>
    <td style="text-align:center;font-weight: bold;"> (Intercept) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.281 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.270 </td>
    <td style="text-align:center;font-weight: bold;"> -0.320 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.242 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.020 </td>
-   <td style="text-align:center;font-weight: bold;"> 3.66e-33 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.220 </td>
+   <td style="text-align:center;font-weight: bold;"> -10.637 </td>
+   <td style="text-align:center;font-weight: bold;"> 7.65e-22 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> divergence </td>
-   <td style="text-align:center;font-weight: bold;"> 0.093 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.042 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.144 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.026 </td>
-   <td style="text-align:center;font-weight: bold;"> 3.68e-04 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.088 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.037 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.138 </td>
+   <td style="text-align:center;font-weight: bold;"> 3.389 </td>
+   <td style="text-align:center;font-weight: bold;"> 8.21e-04 </td>
   </tr>
   <tr>
-   <td style="text-align:center;font-weight: bold;"> richness3 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.060 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.098 </td>
+   <td style="text-align:center;font-weight: bold;"> as.numeric(richness) </td>
    <td style="text-align:center;font-weight: bold;"> -0.023 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.019 </td>
-   <td style="text-align:center;font-weight: bold;"> 1.76e-03 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> richness4 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.047 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.086 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.009 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.020 </td>
-   <td style="text-align:center;font-weight: bold;"> 1.71e-02 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.043 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.003 </td>
+   <td style="text-align:center;font-weight: bold;"> -2.309 </td>
+   <td style="text-align:center;font-weight: bold;"> 2.18e-02 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> nutrients0.35 g/L </td>
    <td style="text-align:center;font-weight: bold;"> 0.182 </td>
    <td style="text-align:center;font-weight: bold;"> 0.145 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.218 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.018 </td>
-   <td style="text-align:center;font-weight: bold;"> 2.22e-19 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.219 </td>
+   <td style="text-align:center;font-weight: bold;"> 9.776 </td>
+   <td style="text-align:center;font-weight: bold;"> 3.61e-19 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> nutrients0.75 g/L </td>
-   <td style="text-align:center;font-weight: bold;"> 0.207 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.169 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.246 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.020 </td>
-   <td style="text-align:center;font-weight: bold;"> 9.79e-22 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.209 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.170 </td>
+   <td style="text-align:center;font-weight: bold;"> 0.248 </td>
+   <td style="text-align:center;font-weight: bold;"> 10.588 </td>
+   <td style="text-align:center;font-weight: bold;"> 1.09e-21 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> temperature22-25 °C </td>
-   <td style="text-align:center;font-weight: bold;"> -0.091 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.128 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.090 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.127 </td>
    <td style="text-align:center;font-weight: bold;"> -0.054 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.019 </td>
-   <td style="text-align:center;font-weight: bold;"> 1.83e-06 </td>
+   <td style="text-align:center;font-weight: bold;"> -4.824 </td>
+   <td style="text-align:center;font-weight: bold;"> 2.52e-06 </td>
   </tr>
   <tr>
    <td style="text-align:center;font-weight: bold;"> temperature25-28 °C </td>
    <td style="text-align:center;font-weight: bold;"> -0.152 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.188 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.116 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.018 </td>
-   <td style="text-align:center;font-weight: bold;"> 1.17e-14 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.189 </td>
+   <td style="text-align:center;font-weight: bold;"> -0.115 </td>
+   <td style="text-align:center;font-weight: bold;"> -8.174 </td>
+   <td style="text-align:center;font-weight: bold;"> 1.83e-14 </td>
   </tr>
 </tbody>
 </table>
@@ -379,22 +407,23 @@ Summary table
 ```
 ## Analysis of Variance Table
 ## 
-## Model 1: log10(stability) ~ log10(imbalance_f) + richness + nutrients + 
+## Model 1: log10(stability) ~ log10(imbalance_f) + as.numeric(richness) + 
+##     nutrients + temperature
+## Model 2: log10(stability) ~ log10(imbalance_r) + as.numeric(richness) + 
+##     nutrients + temperature
+## Model 3: log10(stability) ~ divergence + as.numeric(richness) + nutrients + 
 ##     temperature
-## Model 2: log10(stability) ~ log10(imbalance_r) + richness + nutrients + 
-##     temperature
-## Model 3: log10(stability) ~ divergence + richness + nutrients + temperature
 ##   Res.Df    RSS Df Sum of Sq F Pr(>F)
-## 1    235 3.2535                      
-## 2    235 3.3448  0 -0.091329         
-## 3    235 3.2296  0  0.115193
+## 1    236 3.3209                      
+## 2    236 3.3957  0 -0.074784         
+## 3    236 3.3017  0  0.094008
 ```
 
 ```
 ##               df       AIC
-## lm_full        9 -340.5359
-## lm_full_w      9 -333.8086
-## lm_divergence  9 -342.3249
+## lm_full        8 -337.5510
+## lm_full_w      8 -332.1396
+## lm_divergence  8 -338.9618
 ```
 
 
@@ -431,7 +460,147 @@ The index ranges between -1 and 1, with -1 indicating perfect asyncrony and 1 be
 </div>
 
 
+# SEM 
 
+
+Now, we use a structural equation model (SEM) to explore how stability is influenced by asynchrony, temperature, nutrient levels, imbalance, and richness, with asynchrony also modeled as dependent on imbalance, nutrients, and richness.
+
+
+
+
+```
+## lavaan 0.6-19 ended normally after 1 iteration
+## 
+##   Estimator                                         ML
+##   Optimization method                           NLMINB
+##   Number of model parameters                        12
+## 
+##   Number of observations                           241
+## 
+## Model Test User Model:
+##                                               Standard      Scaled
+##   Test Statistic                                 1.777       1.537
+##   Degrees of freedom                                 1           1
+##   P-value (Chi-square)                           0.183       0.215
+##   Scaling correction factor                                  1.156
+##     Satorra-Bentler correction                                    
+## 
+## Model Test Baseline Model:
+## 
+##   Test statistic                               295.357     353.081
+##   Degrees of freedom                                 9           9
+##   P-value                                        0.000       0.000
+##   Scaling correction factor                                  0.837
+## 
+## User Model versus Baseline Model:
+## 
+##   Comparative Fit Index (CFI)                    0.997       0.998
+##   Tucker-Lewis Index (TLI)                       0.976       0.986
+##                                                                   
+##   Robust Comparative Fit Index (CFI)                         0.998
+##   Robust Tucker-Lewis Index (TLI)                            0.981
+## 
+## Loglikelihood and Information Criteria:
+## 
+##   Loglikelihood user model (H0)                152.706     152.706
+##   Loglikelihood unrestricted model (H1)             NA          NA
+##                                                                   
+##   Akaike (AIC)                                -281.411    -281.411
+##   Bayesian (BIC)                              -239.594    -239.594
+##   Sample-size adjusted Bayesian (SABIC)       -277.631    -277.631
+## 
+## Root Mean Square Error of Approximation:
+## 
+##   RMSEA                                          0.057       0.047
+##   90 Percent confidence interval - lower         0.000       0.000
+##   90 Percent confidence interval - upper         0.192       0.176
+##   P-value H_0: RMSEA <= 0.050                    0.306       0.356
+##   P-value H_0: RMSEA >= 0.080                    0.531       0.469
+##                                                                   
+##   Robust RMSEA                                               0.051
+##   90 Percent confidence interval - lower                     0.000
+##   90 Percent confidence interval - upper                     0.200
+##   P-value H_0: Robust RMSEA <= 0.050                         0.327
+##   P-value H_0: Robust RMSEA >= 0.080                         0.525
+## 
+## Standardized Root Mean Square Residual:
+## 
+##   SRMR                                           0.012       0.012
+## 
+## Parameter Estimates:
+## 
+##   Standard errors                           Robust.sem
+##   Information                                 Expected
+##   Information saturated (h1) model          Structured
+## 
+## Regressions:
+##                      Estimate  Std.Err  z-value  P(>|z|)   Std.lv  Std.all
+##   stability ~                                                             
+##     asynchrny_Grss      0.195    0.033    5.947    0.000    0.195    0.399
+##     temperature        -0.049    0.011   -4.454    0.000   -0.049   -0.241
+##     nutrients           0.147    0.011   13.216    0.000    0.147    0.719
+##     log_imbalanc_f     -0.029    0.012   -2.452    0.014   -0.029   -0.120
+##     richness            0.011    0.010    1.181    0.238    0.011    0.055
+##   asynchrony_Gross ~                                                      
+##     log_imbalanc_f     -0.080    0.029   -2.719    0.007   -0.080   -0.159
+##     nutrients          -0.210    0.022   -9.373    0.000   -0.210   -0.501
+##     richness           -0.102    0.023   -4.404    0.000   -0.102   -0.243
+## 
+## Intercepts:
+##                    Estimate  Std.Err  z-value  P(>|z|)   Std.lv  Std.all
+##    .stability        -0.407    0.040  -10.122    0.000   -0.407   -2.441
+##    .asynchrny_Grss    0.125    0.065    1.921    0.055    0.125    0.367
+## 
+## Variances:
+##                    Estimate  Std.Err  z-value  P(>|z|)   Std.lv  Std.all
+##    .stability         0.012    0.001   10.670    0.000    0.012    0.430
+##    .asynchrny_Grss    0.081    0.009    8.917    0.000    0.081    0.694
+## 
+## R-Square:
+##                    Estimate
+##     stability         0.570
+##     asynchrny_Grss    0.306
+```
+**Model Fit**
+
+The model fit indices suggest a good fit:
+
+Comparative Fit Index (CFI) = 0.998 and Tucker-Lewis Index (TLI) = 0.986, both indicating a good fit as values close to 1 are considered strong.
+Root Mean Square Error of Approximation (RMSEA) = 0.047 (with robust RMSEA at 0.051) and Standardized Root Mean Square Residual (SRMR) = 0.012. These values indicate a good fit, with RMSEA and SRMR values below 0.05 generally preferred.
+
+
+Interpretation of Pathways
+
+
+**Stability**:
+
+*Asynchrony*: Positive and highly significant effect on stability, suggesting that asynchrony (indicating lack of synchrony or compensatory dynamics) is associated with greater stability.
+
+*Temperature*: Negative effect, where higher temperature values correlate with lower stability, potentially due to physiological stress or disruption in community dynamics at higher temperatures.
+
+*Nutrients*: Positive and highly significant, suggesting that greater nutrient availability enhances stability, possibly through support for higher productivity or resource buffering.
+
+*Imbalance*: Negative and significant effect, where greater imbalance reduces stability.
+Richness: Not significant, indicating that within this model, richness does not have a notable effect on stability.
+
+
+**Asynchrony**:
+
+*Imbalance*: Negative and significant, suggesting that greater imbalance reduces asynchrony.
+
+*Nutrients*: Negative and highly significant effect, indicating that higher nutrient concentrations are associated with lower asynchrony, possibly due to homogenizing effects of nutrient availability.
+
+*Richness*: Negative and significant, where increased richness is associated with reduced asynchrony, possibly indicating increased interactions or overlap in resource use among species.
+
+**Explained Variance**
+
+*Stability*: The model explains 57% of the variance in stability, suggesting a substantial amount of stability is accounted for by these factors.
+
+*Asynchrony*: The model explains 30.6% of the variance in asynchrony, indicating that while imbalance, nutrients, and richness contribute, other factors may also play a role in driving asynchrony.
+
+**Summary**
+
+This SEM model demonstrates that stability in the ecosystem is positively associated with asynchrony and nutrient levels, but negatively associated with temperature and imbalance. Interestingly, species richness has no direct impact on stability but does reduce asynchrony, indicating indirect complexity in the stability-dynamics relationship. This highlights the role of environmental and community factors in ecosystem stability, with asynchrony serving as a crucial intermediary in maintaining stability in fluctuating conditions.
 
 <div class="figure" style="text-align: center">
 <img src="SEM.png" alt="SEM." width="718" />

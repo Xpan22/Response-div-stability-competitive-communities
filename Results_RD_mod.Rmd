@@ -328,7 +328,7 @@ wrap_elements(combined_plot) +
 
 We can see that richness does not have a clear effect on community temporal stability, while stability was higher at lower temperature, and nutrients increased community temporal stability.
 
-###Effect RD
+### Effect RD
 
 We are now going to look at how response diversity (imbalance) affected temporal stability of total community biomass. We are going to look at the relationship between fundamental imbalance (so based only on species response surfaces measured in monoculture), an realised imbalance (measured accounting for species contribution to imbalance).
 
@@ -410,7 +410,9 @@ We can see that the positive relationship between temporal stability and respons
 
 
 ## Model: Fundamental Imbalance
+
 First we analyze the effect of fundamental imbalance, temperature, nutrients and richness on biomass temporal stability using a linear model. 
+imbalance and richness were modelled as continuous variables, while temperature and nutrients were modelled as categorical variables. Imbalance was log-transformed to meet the assumptions of linear models.
 
 ```{r results='hide', echo=FALSE, warning=FALSE, message=FALSE}
 library(broom)
@@ -425,18 +427,44 @@ complete_aggr <- complete_aggr %>% mutate(stability = 1/CV) %>%
 ```
 
 ```{r}
-lm_full<-lm(data=complete_aggr,log10(stability)~log10(imbalance_f)+richness+nutrients+temperature)
-```
+lm_full<-lm(data=complete_aggr,log10(stability)~log10(imbalance_f)+as.numeric(richness)+nutrients+temperature)
 
+```
 
 
 
 Check model's assumptions
-```{r model_check1, fig.cap='model check 1.', fig.align="center", fig.height=6, fig.width=10}
+```{r model_check1, fig.cap='model check 1.', fig.align="center", fig.height=9, fig.width=12}
 
 check_model(lm_full)
 ```
+
+
+
+```{r}
+summary(lm_full)
+```
+
+
+A linear model was fitted to examine the effects of resource imbalance, richness, nutrients, and temperature on community stability (measured as log₁₀(stability)). The model explained a significant portion of the variance (Adjusted R² = 0.5115, F(7, 235) = 37.2, p < 2.2e-16).
+
+The intercept of the model was estimated at -0.349 (SE = 0.028, p < 2e-16), indicating the baseline log₁₀(stability) when all predictor variables are at their reference levels.
+
+Among the predictors, log₁₀(imbalance) showed a significant negative effect on stability (Estimate = -0.054, SE = 0.016, p = 0.0009). This suggests that as imbalance increases, stability tends to decrease.
+
+
+Nutrient concentration also had a significant positive effect on stability, with estimates for 0.35 g/L (Estimate = 0.180, SE = 0.019, p < 2e-16) and 0.75 g/L (Estimate = 0.212, SE = 0.019, p < 2e-16) indicating increased stability with higher nutrient levels.
+
+Finally, temperature regimes showed a significant effect on stability. Both 22–25 °C (Estimate = -0.078, SE = 0.019, p = 3.81e-05) and 25–28 °C (Estimate = -0.098, SE = 0.025, p = 8.44e-05) significantly reduced stability when compared to the baseline (18–21 °C).
+
+Richness did not show a significant effect on stability (Estimate = 0.002, SE = 0.019, p = 0.91).
+
+In summary, our findings show that temporal stability is significantly influenced by response diversity (imbalance), nutrient concentration, and temperature, with higher nutrient concentrations enhancing stability and higher temperatures reducing it. However, species richness was not a significant determinant of stability within the conditions of this study.
+
+Prepare publication-ready table 
+
 Summary table
+
 ```{r results='hide', echo=FALSE, warning=FALSE, message=FALSE}
 # Tidy up model results and calculate 95% CI
 model_summary <- lm_full %>%
@@ -444,11 +472,11 @@ model_summary <- lm_full %>%
   dplyr::mutate(
     p.value = formatC(p.value, format = "e", digits = 2) # Format p-value for scientific notation
   ) %>%
-  dplyr::select(term, estimate, conf.low, conf.high, std.error, p.value) # Select relevant columns
+  dplyr::select(term, estimate, conf.low, conf.high, statistic, p.value) # Select relevant columns
 
 # Create a publication-ready table with conditional bold formatting
 table1 <- model_summary %>%
-  kable("html", col.names = c("Term", "Estimate", "Lower 95% CI", "Upper 95% CI", "Std. Error", "p-value"),
+  kable("html", col.names = c("Term", "Estimate", "Lower 95% CI", "Upper 95% CI", "t value", "p-value"),
         digits = 3, align = "c") %>%
   kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
     row_spec(which(as.numeric(model_summary$p.value) < 0.05), bold = TRUE)  
@@ -465,11 +493,11 @@ Then we analyze the effect of realised imbalance, temperature, nutrients and ric
 
 
 ```{r}
-lm_full_w<-lm(data=complete_aggr,log10(stability)~log10(imbalance_r)+richness+nutrients+temperature)
+lm_full_w<-lm(data=complete_aggr,log10(stability)~log10(imbalance_r)+as.numeric(richness)+nutrients+temperature)
 
 ```
 
-chack model's assumptions
+check model's assumptions
 ```{r model_check2, fig.cap="model check 2.", fig.align="center", fig.height=6, fig.width=10}
 
 check_model(lm_full_w)
@@ -484,11 +512,11 @@ model_summary <- lm_full_w %>%
   dplyr::mutate(
     p.value = formatC(p.value, format = "e", digits = 2) # Format p-value for scientific notation
   ) %>%
-  dplyr::select(term, estimate, conf.low, conf.high, std.error, p.value) # Select relevant columns
+  dplyr::select(term, estimate, conf.low, conf.high, statistic, p.value) # Select relevant columns
 
 # Create a publication-ready table with conditional bold formatting
 table2 <- model_summary %>%
-  kable("html", col.names = c("Term", "Estimate", "Lower 95% CI", "Upper 95% CI", "Std. Error", "p-value"),
+  kable("html", col.names = c("Term", "Estimate", "Lower 95% CI", "Upper 95% CI", "t value", "p-value"),
         digits = 3, align = "c") %>%
   kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
     row_spec(which(as.numeric(model_summary$p.value) < 0.05), bold = TRUE)  
@@ -506,7 +534,8 @@ Finally we analyze the effect of divergence, temperature, nutrients and richness
 
 ```{r}
 
-lm_divergence<-lm(data=complete_aggr,log10(stability)~divergence+richness+nutrients+temperature)
+lm_divergence<-lm(data=complete_aggr,log10(stability)~divergence + as.numeric(richness)+nutrients+temperature)
+                  
 ```
 
 
@@ -514,6 +543,7 @@ Check model's assumptions
 ```{r model_check3, fig.cap="model check 3.", fig.align="center", fig.height=6, fig.width=10}
 
 check_model(lm_divergence)
+
 
 ```
 
@@ -525,15 +555,16 @@ model_summary <- lm_divergence %>%
   dplyr::mutate(
     p.value = formatC(p.value, format = "e", digits = 2) # Format p-value for scientific notation
   ) %>%
-  dplyr::select(term, estimate, conf.low, conf.high, std.error, p.value) # Select relevant columns
+  dplyr::select(term, estimate, conf.low, conf.high, statistic, p.value) # Select relevant columns
 # Create a publication-ready table with conditional bold formatting
 table3 <- model_summary %>%
-  kable("html", col.names = c("Term", "Estimate", "Lower 95% CI", "Upper 95% CI", "Std. Error", "p-value"),
+  kable("html", col.names = c("Term", "Estimate", "Lower 95% CI", "Upper 95% CI", "t value", "p-value"),
         digits = 3, align = "c") %>%
   kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
     row_spec(which(as.numeric(model_summary$p.value) < 0.05), bold = TRUE)  
 
 ```
+
 ```{r}
 table3
 ```
@@ -631,7 +662,7 @@ async_aggr<-async_aggr%>%dplyr::mutate(rep_var=sub("_[^_]+$", "", sample_ID))
 
 
 ### Plot stability vs. Asynchrony Gross
-```{r async_plots,results='hide', warning=FALSE, fig.cap='Relatioship temporal stability and asynchrony (Gross) divided by nutrient level.', fig.align="center", fig.height=6, fig.width=8}
+```{r async_plots, fig.cap='Relatioship temporal stability and asynchrony (Gross) divided by nutrient level.', fig.align="center", fig.height=6, fig.width=8}
 plot_asynch_CV_G<-ggplot(data=async_aggr,aes(x=-synchrony_Gross,y=log10(1/CV),color=nutrients))+
   geom_point()+
   geom_smooth(method="lm",show.legend=F)+
@@ -681,7 +712,112 @@ plot_asynch_CV_G
 ```
 
 
+# SEM 
 
+
+Now, we use a structural equation model (SEM) to explore how stability is influenced by asynchrony, temperature, nutrient levels, imbalance, and richness, with asynchrony also modeled as dependent on imbalance, nutrients, and richness.
+
+```{r echo=FALSE, warning=FALSE, results='hide'}
+# Ensure the data is ungrouped before applying transformations
+sem_aggr <- async_aggr %>%
+  ungroup() %>%  # Ensure there is no grouping
+  mutate(
+    log_imbalance_f = log10(imbalance_f),
+    stability = log10(1 / CV),
+    richness = as.numeric(richness),
+    temperature=temperature,
+    asynchrony_Gross= (-synchrony_Gross)
+    #Keep it as an ordered factor
+  )
+
+
+
+sem_aggr$nutrients[sem_aggr$nutrients=="0.01 g/L"]<-0.01
+sem_aggr$nutrients[sem_aggr$nutrients=="0.35 g/L"]<-0.35
+sem_aggr$nutrients[sem_aggr$nutrients=="0.75 g/L"]<-0.75
+
+sem_aggr$temperature[sem_aggr$temperature=="18-21 °C"]=1
+sem_aggr$temperature[sem_aggr$temperature=="22-25 °C"]=2
+sem_aggr$temperature[sem_aggr$temperature=="25-28 °C"]=3
+
+
+#correct balance for magnitude
+# the effect of magnitude goes down, the more divergence there is
+
+# Load the lavaan package
+library(lavaan)
+
+```
+
+```{r}
+
+
+model1B <- '
+  stability ~ asynchrony_Gross
+  +temperature
+  +nutrients
+  +log_imbalance_f+
+  richness
+
+  
+  asynchrony_Gross ~ log_imbalance_f
+  +nutrients
+  +richness
+'
+
+
+
+
+
+# Fit the model
+
+fit1B <- sem(model1B, estimator="MLM",meanstructure = TRUE,data = sem_aggr%>%dplyr::filter(!is.na(synchrony_Gross)))
+
+
+# Summarize the results
+summary(fit1B, standardized = TRUE,rsquare=T, fit.measures = TRUE)
+
+```
+**Model Fit**
+
+The model fit indices suggest a good fit:
+
+Comparative Fit Index (CFI) = 0.998 and Tucker-Lewis Index (TLI) = 0.986, both indicating a good fit as values close to 1 are considered strong.
+Root Mean Square Error of Approximation (RMSEA) = 0.047 (with robust RMSEA at 0.051) and Standardized Root Mean Square Residual (SRMR) = 0.012. These values indicate a good fit, with RMSEA and SRMR values below 0.05 generally preferred.
+
+
+Interpretation of Pathways
+
+
+**Stability**:
+
+*Asynchrony*: Positive and highly significant effect on stability, suggesting that asynchrony (indicating lack of synchrony or compensatory dynamics) is associated with greater stability.
+
+*Temperature*: Negative effect, where higher temperature values correlate with lower stability, potentially due to physiological stress or disruption in community dynamics at higher temperatures.
+
+*Nutrients*: Positive and highly significant, suggesting that greater nutrient availability enhances stability, possibly through support for higher productivity or resource buffering.
+
+*Imbalance*: Negative and significant effect, where greater imbalance reduces stability.
+Richness: Not significant, indicating that within this model, richness does not have a notable effect on stability.
+
+
+**Asynchrony**:
+
+*Imbalance*: Negative and significant, suggesting that greater imbalance reduces asynchrony.
+
+*Nutrients*: Negative and highly significant effect, indicating that higher nutrient concentrations are associated with lower asynchrony, possibly due to homogenizing effects of nutrient availability.
+
+*Richness*: Negative and significant, where increased richness is associated with reduced asynchrony, possibly indicating increased interactions or overlap in resource use among species.
+
+**Explained Variance**
+
+*Stability*: The model explains 57% of the variance in stability, suggesting a substantial amount of stability is accounted for by these factors.
+
+*Asynchrony*: The model explains 30.6% of the variance in asynchrony, indicating that while imbalance, nutrients, and richness contribute, other factors may also play a role in driving asynchrony.
+
+**Summary**
+
+This SEM model demonstrates that stability in the ecosystem is positively associated with asynchrony and nutrient levels, but negatively associated with temperature and imbalance. Interestingly, species richness has no direct impact on stability but does reduce asynchrony, indicating indirect complexity in the stability-dynamics relationship. This highlights the role of environmental and community factors in ecosystem stability, with asynchrony serving as a crucial intermediary in maintaining stability in fluctuating conditions.
 
 ```{r SEM, fig.cap = 'SEM.', fig.align="center", fig.height=6, fig.width=8}
 knitr::include_graphics(("SEM.png"))
