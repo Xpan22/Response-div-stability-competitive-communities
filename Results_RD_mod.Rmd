@@ -79,7 +79,7 @@ df_slopes <- read_csv("Data/df_slopes_cor.csv")
 
 Let's have a look at the biomass dynamics in the different environmental treatments.
 
-Is reaslised imbalance calculated in this chuck?
+Is realised imbalance calculated in this chuck?
 
 ```{r echo=F, warning=FALSE, results='hide'}
 # needs to have id_new variable
@@ -155,6 +155,8 @@ complete_ts<-dplyr::mutate(complete_ts,temperature=as.character(temperature),
 complete_ts<-complete_ts%>%group_by(sample_ID,composition,day)%>%dplyr::mutate(tot_biomass=sum(biomass))
 complete_ts<-complete_ts%>%dplyr::mutate(biom_contribution=biomass/tot_biomass)
 
+df_biomass_mod <- complete_ts
+
 complete_ts<-complete_ts%>%dplyr::mutate(temperature=paste0(temperature," °C"),
                                       nutrients=paste0(nutrients," g/L"))
 
@@ -224,6 +226,47 @@ plot_biomass<-ggplot(data=biomass_ts)+
   
 plot_biomass
 ```
+
+
+First we analyze the effect of diversity, time, nutrients, temperature, and of the interaction between nutrients and temperature on biomass using a mixed model with composition and microcosm ID as random effects. Nutrients was centered on the mean to remove collinearity with temperature. Total community biomass was log transformed. Composition and microcosm ID were added as random effects to account for differential biomass production across communities and to account for the repeated nature of the measurements.
+
+```{r echo=TRUE}
+# Fit the linear mixed model
+lmm <- lmer(
+  log10(tot_biomass + 0.1) ~ as.numeric(day)  + (temperature) * scale(as.numeric(nutrients)) + as.numeric(richness) +
+    (1 | sample_ID) + (1 | composition),
+  data = df_biomass_mod
+)
+```
+
+Check model's assumptions
+```{r model_check0, fig.cap='model check 1.', fig.align="center", fig.height=9, fig.width=12}
+check_model(lmm)
+```
+
+
+```{r fig.width= 10}
+summary(lmm)
+
+```
+
+
+```{r fig.width= 10}
+anova(lmm)
+```
+
+
+
+
+**Time** and **nutrients** independently impact biomass, with biomass decreasing slightly over time and increasing with nutrient levels.
+
+**Temperature** alone also significantly impact biomass, with biomass decreasing as temperature increases.
+
+**temperature-nutrient interactions** are significant, suggesting the positive impact of nutrients on biomass is less pronounced at higher temperatures.
+
+**Richness** does not appear to have a statistically significant effect on total biomass. 
+
+
 
 # Main Results 
 
@@ -376,7 +419,7 @@ plot_main <- main_r_dd %>%
 plot_main
 ```
 
-We can see that imbalance is always negative related to temporal stability, which means that response diversity promotes stability across richness levels. Interestingly, we see that there is not difference in the sign of the relationship between fundamental and realised imbalance. Yet, as the richness increases, the relationship between realised imbalance and stability becomes steeper compared to fundamental imbalance. 
+We can see that imbalance is always negatively related to temporal stability, which means that response diversity promotes stability across richness levels. Interestingly, we see that there is little difference between fundamental and realised imbalance. Yet, as the richness increases, the relationship between realised imbalance and stability becomes steeper compared to fundamental imbalance. 
 
 
 We look also at the relationship between divergence (our original response diversity metric)
@@ -391,10 +434,14 @@ plot_CV_divergence<-complete_aggr%>%ggplot(aes(x=divergence,y=log10(1/CV),color=
     breaks = log10(c(0.1,0.2, 0.4, 0.8, 1.6, 3.2)),
     labels = c("0.1","0.2"," 0.4", "0.8", "1.6", "3.2")
   ) +
-   theme(axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16),
+    theme(
+    axis.title.x = element_text(size = 25),
+    axis.title.y = element_text(size = 25),
+    axis.text = element_text(size = 14),                      # Axis text size             # Facet label text size
+    legend.title = element_text(size = 20),                   # Legend title size
+    legend.text = element_text(size = 20),                     # Legend text size
         strip.background = element_rect(fill = "grey80", color = NA),  
-    strip.text = element_text(size = 12)) +
+    strip.text = element_text(size = 22)) +
   facet_wrap(~richness, labeller = as_labeller(function(x) paste0("richness = ", x)))+
   ylab("Temporal stability\nlog(mean/s.d.)")+
   xlab("divergence") 
@@ -403,7 +450,7 @@ plot_CV_divergence<-complete_aggr%>%ggplot(aes(x=divergence,y=log10(1/CV),color=
 plot_CV_divergence
 
 ```
-We can see that the positive relationship between temporal stability and response diversity measured as divergence holds, but it becomes shallower as richness increases. We could speculated that this due to divergence considering only the responses of the 2 most extreme species. Thus, when species richness increases, disregarding the responses of the other species in the community except the 2 responding the most makes the relationship between response diversity and stability weaker. 
+We can see that the positive relationship between temporal stability and response diversity measured as divergence holds, but it becomes shallower as richness increases. We could speculated that this due to divergence considering only the responses of the 2 most "responding" species. Thus, when species richness increases, disregarding the responses of the other species in the community except the 2 responding the most makes the relationship between response diversity and stability weaker. 
 
 
 # Linear models
@@ -422,11 +469,14 @@ complete_aggr <- complete_aggr %>% mutate(stability = 1/CV) %>%
   dplyr::rename(imbalance_f = abs_sum_slope,
                 imbalance_r = avg_w_sumslopes)
 
+
+
 # summary(lm_full)
 # anova(lm_full)
 ```
 
-```{r}
+
+```{r echo=TRUE}
 lm_full<-lm(data=complete_aggr,log10(stability)~log10(imbalance_f)+as.numeric(richness)+nutrients+temperature)
 
 ```
@@ -443,6 +493,7 @@ check_model(lm_full)
 
 ```{r}
 summary(lm_full)
+
 ```
 
 
@@ -450,14 +501,14 @@ A linear model was fitted to examine the effects of resource imbalance, richness
 
 The intercept of the model was estimated at -0.349 (SE = 0.028, p < 2e-16), indicating the baseline log₁₀(stability) when all predictor variables are at their reference levels.
 
-Among the predictors, log₁₀(imbalance) showed a significant negative effect on stability (Estimate = -0.054, SE = 0.016, p = 0.0009). This suggests that as imbalance increases, stability tends to decrease.
+Among the predictors, log₁₀(imbalance) showed a significant negative effect on stability (Estimate = -0.054, SE = 0.016, p = 0.0009). This suggests that as imbalance increases (more balance), stability tends to decrease.
 
 
 Nutrient concentration also had a significant positive effect on stability, with estimates for 0.35 g/L (Estimate = 0.180, SE = 0.019, p < 2e-16) and 0.75 g/L (Estimate = 0.212, SE = 0.019, p < 2e-16) indicating increased stability with higher nutrient levels.
 
 Finally, temperature regimes showed a significant effect on stability. Both 22–25 °C (Estimate = -0.078, SE = 0.019, p = 3.81e-05) and 25–28 °C (Estimate = -0.098, SE = 0.025, p = 8.44e-05) significantly reduced stability when compared to the baseline (18–21 °C).
 
-Richness did not show a significant effect on stability (Estimate = 0.002, SE = 0.019, p = 0.91).
+Richness did not show a significant effect on stability (Estimate = 0.002, SE = 0.019, p = 0.91), which suggests that it is not richness per se that affects stability in this system. Similar results have been previously reported in the literature, e.g. (Petchey et al. 2002)[https://nsojournals.onlinelibrary.wiley.com/doi/full/10.1034/j.1600-0706.2002.990203.x?casa_token=THaSxpjziQcAAAAA%3Ay_0gJhnL_rcPsrolHEmZvI0VF14a43WRDTy_UB_kDPQOxq2EA98NQT65Co63J58NCeW-SiTIjoDkgelQ] who found that species richness did not significantly impact temporal stability in fluctuating environment.
 
 In summary, our findings show that temporal stability is significantly influenced by response diversity (imbalance), nutrient concentration, and temperature, with higher nutrient concentrations enhancing stability and higher temperatures reducing it. However, species richness was not a significant determinant of stability within the conditions of this study.
 
@@ -492,7 +543,7 @@ table1
 Then we analyze the effect of realised imbalance, temperature, nutrients and richness on biomass temporal stability using a linear model. 
 
 
-```{r}
+```{r echo=TRUE}
 lm_full_w<-lm(data=complete_aggr,log10(stability)~log10(imbalance_r)+as.numeric(richness)+nutrients+temperature)
 
 ```
@@ -532,7 +583,7 @@ table2
 ## Model: Divergence
 Finally we analyze the effect of divergence, temperature, nutrients and richness on biomass temporal stability using a linear model. 
 
-```{r}
+```{r echo=TRUE}
 
 lm_divergence<-lm(data=complete_aggr,log10(stability)~divergence + as.numeric(richness)+nutrients+temperature)
                   
@@ -575,11 +626,31 @@ table3
 anova(lm_full,lm_full_w,lm_divergence)
 
 ```
+
 ```{r}
 AIC(lm_full, lm_full_w, lm_divergence)
 ```
 
+```{r}
+mod1 <- lm(data=complete_aggr,log10(stability)~log10(imbalance_f))
+check_model(mod1)
+summary(mod1)
 
+```
+
+
+
+```{r}
+mod2 <- lm(data=complete_aggr,log10(stability)~(divergence))
+check_model(mod2)
+summary(mod2)
+```
+
+```{r}
+mod3 <- lm(data=complete_aggr,log10(stability)~log10(imbalance_r))
+check_model(mod3)
+summary(mod3)
+```
 ### sum vs. weighted_sum
 
 We now look at how fundamental and realised imbalance are related to each other. 
@@ -688,7 +759,7 @@ plot_asynch_CV_G
 ```
 ### Plot Asynchrony Gross vs fundamental imbalance
 
-```{r async, results='hide', warning=FALSE, fig.cap='Relatioship between asynchrony and fundamental imbalance divided by nutrient level.', fig.align="center", fig.height=6, fig.width=8}
+```{r async, fig.cap='Relatioship between asynchrony and fundamental imbalance divided by nutrient level.', fig.align="center", fig.height=6, fig.width=8}
 
 plot_asynch_CV_G<-ggplot(data=async_aggr,aes(x=log10(imbalance_f),y=-synchrony_Gross,color=nutrients))+
   geom_point()+

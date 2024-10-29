@@ -1,7 +1,7 @@
 ---
 title: "Analysis of the experiment looking at the effect of response diversity on community stability in fluctuating environments"
 author: "Til Hämmig, Francesco Polazzo"
-date: "28 October, 2024"
+date: "29 October, 2024"
 output:
   bookdown::html_document2:
     toc: true
@@ -36,7 +36,7 @@ This document is produced by an Rmarkdown file that includes code to reproduce f
 
 Let's have a look at the biomass dynamics in the different environmental treatments.
 
-Is reaslised imbalance calculated in this chuck?
+Is realised imbalance calculated in this chuck?
 
 
 
@@ -46,6 +46,114 @@ Is reaslised imbalance calculated in this chuck?
 <img src="Results_RD_mod_files/figure-html/plot_biomass-1.png" alt="Community total biomass during the experiment in different environmental treatments. Different color represent richness levels."  />
 <p class="caption">(\#fig:plot_biomass)Community total biomass during the experiment in different environmental treatments. Different color represent richness levels.</p>
 </div>
+
+
+First we analyze the effect of diversity, time, nutrients, temperature, and of the interaction between nutrients and temperature on biomass using a mixed model with composition and microcosm ID as random effects. Nutrients was centered on the mean to remove collinearity with temperature. Total community biomass was log transformed. Composition and microcosm ID were added as random effects to account for differential biomass production across communities and to account for the repeated nature of the measurements.
+
+
+``` r
+# Fit the linear mixed model
+lmm <- lmer(
+  log10(tot_biomass + 0.1) ~ as.numeric(day)  + (temperature) * scale(as.numeric(nutrients)) + as.numeric(richness) +
+    (1 | sample_ID) + (1 | composition),
+  data = df_biomass_mod
+)
+```
+
+Check model's assumptions
+<div class="figure" style="text-align: center">
+<img src="Results_RD_mod_files/figure-html/model_check0-1.png" alt="model check 1."  />
+<p class="caption">(\#fig:model_check0)model check 1.</p>
+</div>
+
+
+
+```
+## Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+## lmerModLmerTest]
+## Formula: log10(tot_biomass + 0.1) ~ as.numeric(day) + (temperature) *  
+##     scale(as.numeric(nutrients)) + as.numeric(richness) + (1 |  
+##     sample_ID) + (1 | composition)
+##    Data: df_biomass_mod
+## 
+## REML criterion at convergence: -63618.9
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -3.0048 -0.6387 -0.1640  0.4122  7.8776 
+## 
+## Random effects:
+##  Groups      Name        Variance  Std.Dev.
+##  sample_ID   (Intercept) 9.493e-05 0.009743
+##  composition (Intercept) 1.519e-04 0.012324
+##  Residual                1.986e-03 0.044563
+## Number of obs: 18954, groups:  sample_ID, 243; composition, 24
+## 
+## Fixed effects:
+##                                                 Estimate Std. Error         df
+## (Intercept)                                   -8.898e-01  1.011e-02  2.317e+01
+## as.numeric(day)                               -1.801e-03  1.857e-05  1.869e+04
+## temperature22-25                              -1.078e-02  1.955e-03  2.036e+02
+## temperature25-28                              -2.398e-02  1.936e-03  2.026e+02
+## scale(as.numeric(nutrients))                   3.435e-02  1.371e-03  2.039e+02
+## as.numeric(richness)                          -4.329e-03  3.452e-03  2.209e+01
+## temperature22-25:scale(as.numeric(nutrients)) -9.430e-03  1.968e-03  2.055e+02
+## temperature25-28:scale(as.numeric(nutrients)) -1.842e-02  1.968e-03  2.061e+02
+##                                               t value Pr(>|t|)    
+## (Intercept)                                   -88.022  < 2e-16 ***
+## as.numeric(day)                               -96.981  < 2e-16 ***
+## temperature22-25                               -5.513 1.06e-07 ***
+## temperature25-28                              -12.386  < 2e-16 ***
+## scale(as.numeric(nutrients))                   25.053  < 2e-16 ***
+## as.numeric(richness)                           -1.254    0.223    
+## temperature22-25:scale(as.numeric(nutrients))  -4.790 3.18e-06 ***
+## temperature25-28:scale(as.numeric(nutrients))  -9.364  < 2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Correlation of Fixed Effects:
+##             (Intr) as.nmrc(d) tm22-25 tm25-28 s(.()) as.nmrc(r) t22-25:
+## as.nmrc(dy) -0.053                                                     
+## tmprtr22-25 -0.074  0.000                                              
+## tmprtr25-28 -0.072  0.000      0.547                                   
+## scl(s.nm())  0.028  0.000      0.066   0.000                           
+## as.nmrc(rc) -0.957  0.000     -0.021  -0.027  -0.025                   
+## t22-25:(.() -0.020  0.000     -0.036   0.050  -0.719  0.015            
+## t25-28:(.() -0.024  0.000     -0.009   0.036  -0.701  0.016      0.528
+```
+
+
+
+```
+## Type III Analysis of Variance Table with Satterthwaite's method
+##                                           Sum Sq Mean Sq NumDF   DenDF
+## as.numeric(day)                          18.6778 18.6778     1 18690.4
+## temperature                               0.3092  0.1546     2   203.1
+## scale(as.numeric(nutrients))              1.9474  1.9474     1   204.2
+## as.numeric(richness)                      0.0031  0.0031     1    22.1
+## temperature:scale(as.numeric(nutrients))  0.1742  0.0871     2   205.2
+##                                            F value Pr(>F)    
+## as.numeric(day)                          9405.3092 <2e-16 ***
+## temperature                                77.8507 <2e-16 ***
+## scale(as.numeric(nutrients))              980.6282 <2e-16 ***
+## as.numeric(richness)                        1.5724  0.223    
+## temperature:scale(as.numeric(nutrients))   43.8564 <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+
+
+
+**Time** and **nutrients** independently impact biomass, with biomass decreasing slightly over time and increasing with nutrient levels.
+
+**Temperature** alone also significantly impact biomass, with biomass decreasing as temperature increases.
+
+**temperature-nutrient interactions** are significant, suggesting the positive impact of nutrients on biomass is less pronounced at higher temperatures.
+
+**Richness** does not appear to have a statistically significant effect on total biomass. 
+
+
 
 # Main Results 
 
@@ -74,7 +182,7 @@ This is fundamentally testing our most important hypothesis.
 <p class="caption">(\#fig:effect_RD)Effects of fundamental and realised response diversity (measured as imbalance) on total community biomass temporal stability.</p>
 </div>
 
-We can see that imbalance is always negative related to temporal stability, which means that response diversity promotes stability across richness levels. Interestingly, we see that there is not difference in the sign of the relationship between fundamental and realised imbalance. Yet, as the richness increases, the relationship between realised imbalance and stability becomes steeper compared to fundamental imbalance. 
+We can see that imbalance is always negatively related to temporal stability, which means that response diversity promotes stability across richness levels. Interestingly, we see that there is little difference between fundamental and realised imbalance. Yet, as the richness increases, the relationship between realised imbalance and stability becomes steeper compared to fundamental imbalance. 
 
 
 We look also at the relationship between divergence (our original response diversity metric)
@@ -83,7 +191,7 @@ We look also at the relationship between divergence (our original response diver
 <img src="Results_RD_mod_files/figure-html/divergence_CV-1.png" alt="Relationship between Divergence and temporal stability of total community biomass."  />
 <p class="caption">(\#fig:divergence_CV)Relationship between Divergence and temporal stability of total community biomass.</p>
 </div>
-We can see that the positive relationship between temporal stability and response diversity measured as divergence holds, but it becomes shallower as richness increases. We could speculated that this due to divergence considering only the responses of the 2 most extreme species. Thus, when species richness increases, disregarding the responses of the other species in the community except the 2 responding the most makes the relationship between response diversity and stability weaker. 
+We can see that the positive relationship between temporal stability and response diversity measured as divergence holds, but it becomes shallower as richness increases. We could speculated that this due to divergence considering only the responses of the 2 most "responding" species. Thus, when species richness increases, disregarding the responses of the other species in the community except the 2 responding the most makes the relationship between response diversity and stability weaker. 
 
 
 # Linear models
@@ -97,6 +205,10 @@ imbalance and richness were modelled as continuous variables, while temperature 
 
 
 
+
+``` r
+lm_full<-lm(data=complete_aggr,log10(stability)~log10(imbalance_f)+as.numeric(richness)+nutrients+temperature)
+```
 
 
 
@@ -141,14 +253,14 @@ A linear model was fitted to examine the effects of resource imbalance, richness
 
 The intercept of the model was estimated at -0.349 (SE = 0.028, p < 2e-16), indicating the baseline log₁₀(stability) when all predictor variables are at their reference levels.
 
-Among the predictors, log₁₀(imbalance) showed a significant negative effect on stability (Estimate = -0.054, SE = 0.016, p = 0.0009). This suggests that as imbalance increases, stability tends to decrease.
+Among the predictors, log₁₀(imbalance) showed a significant negative effect on stability (Estimate = -0.054, SE = 0.016, p = 0.0009). This suggests that as imbalance increases (more balance), stability tends to decrease.
 
 
 Nutrient concentration also had a significant positive effect on stability, with estimates for 0.35 g/L (Estimate = 0.180, SE = 0.019, p < 2e-16) and 0.75 g/L (Estimate = 0.212, SE = 0.019, p < 2e-16) indicating increased stability with higher nutrient levels.
 
 Finally, temperature regimes showed a significant effect on stability. Both 22–25 °C (Estimate = -0.078, SE = 0.019, p = 3.81e-05) and 25–28 °C (Estimate = -0.098, SE = 0.025, p = 8.44e-05) significantly reduced stability when compared to the baseline (18–21 °C).
 
-Richness did not show a significant effect on stability (Estimate = 0.002, SE = 0.019, p = 0.91).
+Richness did not show a significant effect on stability (Estimate = 0.002, SE = 0.019, p = 0.91), which suggests that it is not richness per se that affects stability in this system. Similar results have been previously reported in the literature, e.g. (Petchey et al. 2002)[https://nsojournals.onlinelibrary.wiley.com/doi/full/10.1034/j.1600-0706.2002.990203.x?casa_token=THaSxpjziQcAAAAA%3Ay_0gJhnL_rcPsrolHEmZvI0VF14a43WRDTy_UB_kDPQOxq2EA98NQT65Co63J58NCeW-SiTIjoDkgelQ] who found that species richness did not significantly impact temporal stability in fluctuating environment.
 
 In summary, our findings show that temporal stability is significantly influenced by response diversity (imbalance), nutrient concentration, and temperature, with higher nutrient concentrations enhancing stability and higher temperatures reducing it. However, species richness was not a significant determinant of stability within the conditions of this study.
 
@@ -234,6 +346,9 @@ Then we analyze the effect of realised imbalance, temperature, nutrients and ric
 
 
 
+``` r
+lm_full_w<-lm(data=complete_aggr,log10(stability)~log10(imbalance_r)+as.numeric(richness)+nutrients+temperature)
+```
 
 check model's assumptions
 <div class="figure" style="text-align: center">
@@ -320,6 +435,9 @@ Summary table
 Finally we analyze the effect of divergence, temperature, nutrients and richness on biomass temporal stability using a linear model. 
 
 
+``` r
+lm_divergence<-lm(data=complete_aggr,log10(stability)~divergence + as.numeric(richness)+nutrients+temperature)
+```
 
 
 Check model's assumptions
@@ -419,6 +537,7 @@ Summary table
 ## 3    236 3.3017  0  0.094008
 ```
 
+
 ```
 ##               df       AIC
 ## lm_full        8 -337.5510
@@ -426,7 +545,76 @@ Summary table
 ## lm_divergence  8 -338.9618
 ```
 
+![](Results_RD_mod_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
 
+```
+## 
+## Call:
+## lm(formula = log10(stability) ~ log10(imbalance_f), data = complete_aggr)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.45292 -0.08388  0.00328  0.08204  0.53061 
+## 
+## Coefficients:
+##                    Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)        -0.34850    0.01704 -20.446  < 2e-16 ***
+## log10(imbalance_f) -0.10806    0.01429  -7.562 8.32e-13 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.1517 on 241 degrees of freedom
+## Multiple R-squared:  0.1918,	Adjusted R-squared:  0.1884 
+## F-statistic: 57.18 on 1 and 241 DF,  p-value: 8.317e-13
+```
+
+
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
+
+```
+## 
+## Call:
+## lm(formula = log10(stability) ~ (divergence), data = complete_aggr)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.41454 -0.08948 -0.00742  0.09164  0.65272 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -0.27915    0.01341 -20.819  < 2e-16 ***
+## divergence   0.13421    0.03102   4.327 2.22e-05 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.1625 on 241 degrees of freedom
+## Multiple R-squared:  0.07208,	Adjusted R-squared:  0.06823 
+## F-statistic: 18.72 on 1 and 241 DF,  p-value: 2.218e-05
+```
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-23-1.png)<!-- -->
+
+```
+## 
+## Call:
+## lm(formula = log10(stability) ~ log10(imbalance_r), data = complete_aggr)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.44831 -0.07679  0.00482  0.07732  0.52305 
+## 
+## Coefficients:
+##                    Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)        -0.44115    0.03166 -13.933  < 2e-16 ***
+## log10(imbalance_r) -0.13683    0.02072  -6.604 2.53e-10 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.1552 on 241 degrees of freedom
+## Multiple R-squared:  0.1532,	Adjusted R-squared:  0.1497 
+## F-statistic: 43.61 on 1 and 241 DF,  p-value: 2.533e-10
+```
 ### sum vs. weighted_sum
 
 We now look at how fundamental and realised imbalance are related to each other. 
