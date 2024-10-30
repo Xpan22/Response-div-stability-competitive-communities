@@ -943,7 +943,7 @@ summary(mixed_M_int)
 
 
 
-```{r async, fig.cap='Relatioship between asynchrony and fundamental imbalance divided by nutrient level.', fig.align="center", fig.height=6, fig.width=8}
+```{r interactions, fig.cap='Relatioship between asynchrony and fundamental imbalance divided by nutrient level.', fig.align="center", fig.height=6, fig.width=8}
 
 
 
@@ -963,6 +963,6 @@ plot_int_stab<-ggplot(data=int_aggr%>%dplyr::filter(theta%in%c("none",5)),aes(x=
 
 
 
-
+plot_int_stab
 ```
 
