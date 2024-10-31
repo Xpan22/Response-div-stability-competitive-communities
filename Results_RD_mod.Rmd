@@ -830,13 +830,13 @@ library(lavaan)
 model1B <- '
   stability ~ asynchrony_Gross
   +temperature
-  +nutrients
+  
   +log_imbalance_f+
   richness
 
   
   asynchrony_Gross ~ log_imbalance_f
-  +nutrients
+  
   +richness
 '
 
@@ -846,7 +846,7 @@ model1B <- '
 
 # Fit the model
 
-fit1B <- sem(model1B, estimator="MLM",meanstructure = TRUE,data = sem_aggr%>%dplyr::filter(!is.na(synchrony_Gross)))
+fit1B <- sem(model1B,estimator="MLM",meanstructure = TRUE,data = sem_aggr%>%dplyr::filter(!is.na(synchrony_Gross)))
 
 
 # Summarize the results
@@ -927,7 +927,7 @@ int_aggr$theta[is.na(int_aggr$theta)]="none"
 
 
 ```{r}
-mixed_M_int<-lmer(data=int_aggr%>%dplyr::filter(theta%in%c("none","var")),log10(stability)~log10(imbalance_f)+nutrients+temperature+as.numeric(richness)+mean_interaction+(1|rep_var))
+mixed_M_int<-lm(data=int_aggr%>%dplyr::filter(theta%in%c("none","var")),log10(stability)~log10(imbalance_f)+nutrients+temperature+as.numeric(richness)+mean_interaction)
 ```
 
 
@@ -964,5 +964,45 @@ plot_int_stab<-ggplot(data=int_aggr%>%dplyr::filter(theta%in%c("none","var")),ae
 
 
 plot_int_stab
+```
+
+
+
+
+```{r}
+
+int_aggr<-int_aggr%>%mutate(richness=as.numeric(richness))
+
+
+sem_aggr<-full_join(sem_aggr,int_aggr%>%dplyr::select(mean_interaction,sample_ID,theta))
+
+model_int <- '
+  stability ~ asynchrony_Gross
+  +temperature
+  +nutrients
+  +log_imbalance_f+
+  richness+
+  mean_interaction
+
+  
+  asynchrony_Gross ~ log_imbalance_f
+  +nutrients
+  +richness+
+  mean_interaction
+'
+
+
+
+
+
+# Fit the model
+
+
+
+fit_int <- sem(model_int, estimator="MLM",meanstructure = TRUE,data = sem_aggr%>%dplyr::filter(!is.na(asynchrony_Gross),theta%in%c("none","var")))
+
+
+# Summarize the results
+summary(fit_int, standardized = TRUE,rsquare=T, fit.measures = TRUE)
 ```
 
