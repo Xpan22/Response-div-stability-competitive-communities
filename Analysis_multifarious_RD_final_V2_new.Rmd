@@ -622,7 +622,7 @@ regimes <- list(
 )
 
 # Define nutrient concentrations
-nutrient_levels <- c(0.001, 0.35, 0.75) # g/L
+nutrient_levels <- c(0.01, 0.35, 0.75) # g/L
 
 # Function to create a 7-day cycle for a given temperature range
 create_cycle <- function(min_temp, max_temp, days) {
@@ -730,6 +730,58 @@ df_slopes<-df_slopes%>%mutate(nutrients=paste0(nutrients," g/L"),
 ```
 
 
+## Calculate diveregence for all possible compositions
+
+
+```{r communities, fig.cap='Community compositions that were used in the experiment to create, for each richness level, a gradient of response diversity. Letter represent different species: C = Colpidium, S = Spirostomum, D = Dexiostoma, P = Paramecium, L = Loxocephalus', fig.align="center", fig.height=16, fig.width=25}
+
+characters <- c("C", "D", "L", "S", "P")
+
+richness_2<-combn(characters, 2, FUN = function(x) paste0(x, collapse = ""))
+richness_3<-combn(characters, 3, FUN = function(x) paste0(x, collapse = ""))
+richness_4<-combn(characters, 4, FUN = function(x) paste0(x, collapse = ""))
+composition<-c(richness_2,richness_3,richness_4)
+
+compositions_df<-as.data.frame(expand.grid(composition=composition,nutrients=c("0.01 g/L","0.35 g/L","0.75 g/L"),temperature=c("18-21 °C","22-25 °C","25-28 °C")))
+
+compositions_df<-compositions_df%>%mutate(richness=nchar(as.character(composition)))
+
+
+all_div<-apply(compositions_df,1,function(r){
+  slopes<-dplyr::filter(df_slopes,nutrients==r[2],
+                 temperature==r[3],
+  species_initial%in%strsplit(r[1],"")[[1]])
+
+  
+  divergence<-data.frame(divergence=(max(slopes$slope)-min(slopes$slope)-abs(abs(max(slopes$slope))-abs(min(slopes$slope))))/(max(slopes$slope)-min(slopes$slope)),
+                                composition=r[1],
+                         temperature=r[3],nutrients=r[2])
+})
+
+all_div<-as.data.frame(do.call("rbind", all_div))
+all_div<-full_join(all_div,compositions_df,join_by(nutrients,temperature,composition))
+
+
+plot_all_div <- ggplot(data = all_div, aes(x = richness, y = divergence, label = composition)) +
+  geom_point(size = 3) +  # Adjust point size directly instead of using aes()
+  geom_text_repel(size = 6, max.overlaps = 100) +  # Increase text size in geom_text_repel
+  facet_grid(temperature~ nutrients) +
+  theme_classic(base_size = 20) +  # Increase the base text size for theme elements
+  theme(
+    plot.title = element_text(size = 30, face = "bold"),       # Title size
+    axis.title = element_text(size = 25),                      # Axis titles
+    axis.text = element_text(size = 22),                       # Axis text
+    strip.text = element_text(size = 22),                      # Facet label text
+    legend.title = element_text(size = 22),                    # Legend title
+    legend.text = element_text(size = 22)                      # Legend text
+  )
+
+
+
+plot_all_div
+```
+
+
 ## Calculate diveregence
 
 Communities employed in each environmental treatment were selected prior to the community experiment based on mono culture response experiments. While analyzing Community data using the BEMOVI R package, settings had to be changed (threshold and minimal particle size) to reduce processing time to a manageable level. To stay consistent between mono culture and community experiment (and to ensure correct species identification), we reanalyzed mono culture data. This resulted in slightly different response surfaces, causing some values of divergence to change. Therefore, the gradient of divergence has changed for some environmental treatments. 
@@ -766,7 +818,7 @@ write_csv(selection_div,file="Data/divergence_df.csv")
 plot_selection_div <- ggplot(data = selection_div, aes(x = richness, y = divergence, label = composition)) +
   geom_point(size = 3) +  # Adjust point size directly instead of using aes()
   geom_text_repel(size = 6, max.overlaps = 100) +  # Increase text size in geom_text_repel
-  facet_wrap(~ treatment) +
+  facet_grid(temperature~ nutrients) +
   theme_classic(base_size = 20) +  # Increase the base text size for theme elements
   theme(
     plot.title = element_text(size = 30, face = "bold"),       # Title size
@@ -782,6 +834,10 @@ plot_selection_div <- ggplot(data = selection_div, aes(x = richness, y = diverge
 plot_selection_div
 ```
 
+
+```{r}
+
+```
 
 
 
