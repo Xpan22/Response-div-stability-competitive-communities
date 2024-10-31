@@ -906,7 +906,7 @@ Structural equation model (SEM) of the relationship between fundamental imbalanc
 
 #Species Interactions
 ```{r results='hide', echo=FALSE, warning=FALSE, message=FALSE}
-interactions_df <- read_csv("Data/interactions_df_multi_thetas.csv")
+interactions_df <- read_csv("Data/interactions_df_var_thetas.csv")
 
 int_aggr<-interactions_df%>%group_by(theta,sample_ID)%>%
   summarize(mean_int_strength=mean(abs(coefficient_value),na.rm=T),
@@ -927,7 +927,7 @@ int_aggr$theta[is.na(int_aggr$theta)]="none"
 
 
 ```{r}
-mixed_M_int<-lmer(data=int_aggr%>%dplyr::filter(theta%in%c("none",5)),log10(stability)~log10(imbalance_f)+nutrients+temperature+as.numeric(richness)+mean_interaction+(1|rep_var))
+mixed_M_int<-lmer(data=int_aggr%>%dplyr::filter(theta%in%c("none","var")),log10(stability)~log10(imbalance_f)+nutrients+temperature+as.numeric(richness)+mean_interaction+(1|rep_var))
 ```
 
 
@@ -947,7 +947,7 @@ summary(mixed_M_int)
 
 
 
-plot_int_stab<-ggplot(data=int_aggr%>%dplyr::filter(theta%in%c("none",5)),aes(x=mean_interaction,y=-synchrony_Gross,color=nutrients))+
+plot_int_stab<-ggplot(data=int_aggr%>%dplyr::filter(theta%in%c("none","var")),aes(x=mean_interaction,y=-synchrony_Gross,color=nutrients))+
   geom_point()+
   geom_smooth(method="lm",show.legend=F)+
   theme_classic() +
