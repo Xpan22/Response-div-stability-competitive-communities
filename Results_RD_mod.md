@@ -1,7 +1,7 @@
 ---
 title: "Analysis of the experiment looking at the effect of response diversity on community stability in fluctuating environments"
 author: "Til Hämmig, Francesco Polazzo"
-date: "29 October, 2024"
+date: "31 October, 2024"
 output:
   bookdown::html_document2:
     toc: true
@@ -10,6 +10,7 @@ output:
       smooth_scroll: true
     code_folding: hide
     keep_md: yes
+    fig_caption: true  
 editor_options: 
   markdown: 
     wrap: 72
@@ -22,7 +23,7 @@ editor_options:
 
 # Introduction
 
-The purpose of this document is to provide a reproducible record of all analyses and figures in the main article. The main article is focused on the effect of response diversity on community stability in fluctuating environments. We are going to look at the effect of response diversity, richness, temperature and nutrients on community temporal stability. Specifically, we are going to look at the effect of fundamental and realized imbalance (our measurements of stability) on temporal stability. Finally, as response diversity is thought to stabilize temporal stability of aggregate community properties via asynchrony, we are going to look at the relationship between response diversity and asynchrony. 
+The purpose of this document is to provide a reproducible record of all analyses and figures in the main article. The main article is focused on the effect of response diversity on community stability in fluctuating environments. We are going to look at the effect of response diversity, richness, temperature and nutrients on community temporal stability. Specifically, we are going to look at the effect of fundamental and realized balance (our measurements of stability) on temporal stability. Finally, as response diversity is thought to stabilize temporal stability of aggregate community properties via asynchrony, we are going to look at the relationship between response diversity and asynchrony. 
 
 This document is produced by an Rmarkdown file that includes code to reproduce from data all results presented in the main article.
 
@@ -36,7 +37,7 @@ This document is produced by an Rmarkdown file that includes code to reproduce f
 
 Let's have a look at the biomass dynamics in the different environmental treatments.
 
-Is realised imbalance calculated in this chuck?
+Is realised balance calculated in this chuck?
 
 
 
@@ -48,116 +49,11 @@ Is realised imbalance calculated in this chuck?
 </div>
 
 
-First we analyze the effect of diversity, time, nutrients, temperature, and of the interaction between nutrients and temperature on biomass using a mixed model with composition and microcosm ID as random effects. Nutrients was centered on the mean to remove collinearity with temperature. Total community biomass was log transformed. Composition and microcosm ID were added as random effects to account for differential biomass production across communities and to account for the repeated nature of the measurements.
-
-
-``` r
-# Fit the linear mixed model
-lmm <- lmer(
-  log10(tot_biomass + 0.1) ~ as.numeric(day)  + (temperature) * scale(as.numeric(nutrients)) + as.numeric(richness) +
-    (1 | sample_ID) + (1 | composition),
-  data = df_biomass_mod
-)
-```
-
-Check model's assumptions
-<div class="figure" style="text-align: center">
-<img src="Results_RD_mod_files/figure-html/model_check0-1.png" alt="model check 1."  />
-<p class="caption">(\#fig:model_check0)model check 1.</p>
-</div>
-
-
-
-```
-## Linear mixed model fit by REML. t-tests use Satterthwaite's method [
-## lmerModLmerTest]
-## Formula: log10(tot_biomass + 0.1) ~ as.numeric(day) + (temperature) *  
-##     scale(as.numeric(nutrients)) + as.numeric(richness) + (1 |  
-##     sample_ID) + (1 | composition)
-##    Data: df_biomass_mod
-## 
-## REML criterion at convergence: -63618.9
-## 
-## Scaled residuals: 
-##     Min      1Q  Median      3Q     Max 
-## -3.0048 -0.6387 -0.1640  0.4122  7.8776 
-## 
-## Random effects:
-##  Groups      Name        Variance  Std.Dev.
-##  sample_ID   (Intercept) 9.493e-05 0.009743
-##  composition (Intercept) 1.519e-04 0.012324
-##  Residual                1.986e-03 0.044563
-## Number of obs: 18954, groups:  sample_ID, 243; composition, 24
-## 
-## Fixed effects:
-##                                                 Estimate Std. Error         df
-## (Intercept)                                   -8.898e-01  1.011e-02  2.317e+01
-## as.numeric(day)                               -1.801e-03  1.857e-05  1.869e+04
-## temperature22-25                              -1.078e-02  1.955e-03  2.036e+02
-## temperature25-28                              -2.398e-02  1.936e-03  2.026e+02
-## scale(as.numeric(nutrients))                   3.435e-02  1.371e-03  2.039e+02
-## as.numeric(richness)                          -4.329e-03  3.452e-03  2.209e+01
-## temperature22-25:scale(as.numeric(nutrients)) -9.430e-03  1.968e-03  2.055e+02
-## temperature25-28:scale(as.numeric(nutrients)) -1.842e-02  1.968e-03  2.061e+02
-##                                               t value Pr(>|t|)    
-## (Intercept)                                   -88.022  < 2e-16 ***
-## as.numeric(day)                               -96.981  < 2e-16 ***
-## temperature22-25                               -5.513 1.06e-07 ***
-## temperature25-28                              -12.386  < 2e-16 ***
-## scale(as.numeric(nutrients))                   25.053  < 2e-16 ***
-## as.numeric(richness)                           -1.254    0.223    
-## temperature22-25:scale(as.numeric(nutrients))  -4.790 3.18e-06 ***
-## temperature25-28:scale(as.numeric(nutrients))  -9.364  < 2e-16 ***
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Correlation of Fixed Effects:
-##             (Intr) as.nmrc(d) tm22-25 tm25-28 s(.()) as.nmrc(r) t22-25:
-## as.nmrc(dy) -0.053                                                     
-## tmprtr22-25 -0.074  0.000                                              
-## tmprtr25-28 -0.072  0.000      0.547                                   
-## scl(s.nm())  0.028  0.000      0.066   0.000                           
-## as.nmrc(rc) -0.957  0.000     -0.021  -0.027  -0.025                   
-## t22-25:(.() -0.020  0.000     -0.036   0.050  -0.719  0.015            
-## t25-28:(.() -0.024  0.000     -0.009   0.036  -0.701  0.016      0.528
-```
-
-
-
-```
-## Type III Analysis of Variance Table with Satterthwaite's method
-##                                           Sum Sq Mean Sq NumDF   DenDF
-## as.numeric(day)                          18.6778 18.6778     1 18690.4
-## temperature                               0.3092  0.1546     2   203.1
-## scale(as.numeric(nutrients))              1.9474  1.9474     1   204.2
-## as.numeric(richness)                      0.0031  0.0031     1    22.1
-## temperature:scale(as.numeric(nutrients))  0.1742  0.0871     2   205.2
-##                                            F value Pr(>F)    
-## as.numeric(day)                          9405.3092 <2e-16 ***
-## temperature                                77.8507 <2e-16 ***
-## scale(as.numeric(nutrients))              980.6282 <2e-16 ***
-## as.numeric(richness)                        1.5724  0.223    
-## temperature:scale(as.numeric(nutrients))   43.8564 <2e-16 ***
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-```
-
-
-
-
-**Time** and **nutrients** independently impact biomass, with biomass decreasing slightly over time and increasing with nutrient levels.
-
-**Temperature** alone also significantly impact biomass, with biomass decreasing as temperature increases.
-
-**temperature-nutrient interactions** are significant, suggesting the positive impact of nutrients on biomass is less pronounced at higher temperatures.
-
-**Richness** does not appear to have a statistically significant effect on total biomass. 
-
 
 
 # Main Results 
 
-We now look at the main results of the experiment. We are going to look first at the effect of richness, temperature and nutrients on community temporal stability. Then, we are going to look at the effect of fundamental and realised imbalance on temporal stability. Finally, we are going to look at the relationship between response diversity and temporal stability.
+We now look at the main results of the experiment. We are going to look first at the effect of richness, temperature and nutrients on community temporal stability. Then, we are going to look at the effect of fundamental and realised balance on temporal stability. Finally, we are going to look at the relationship between response diversity and temporal stability.
 
 In the whole analysis, we calculated the temporal stability of total community biomass as the inverse of the coefficient of variation (ICV) (i.e. $\frac{\sigma}{\mu}$). 
 
@@ -171,43 +67,392 @@ In the whole analysis, we calculated the temporal stability of total community b
 
 We can see that richness does not have a clear effect on community temporal stability, while stability was higher at lower temperature, and nutrients increased community temporal stability.
 
-### Effect RD
+### Effect of Divergence
 
-We are now going to look at how response diversity (imbalance) affected temporal stability of total community biomass. We are going to look at the relationship between fundamental imbalance (so based only on species response surfaces measured in monoculture), an realised imbalance (measured accounting for species contribution to imbalance).
-
-This is fundamentally testing our most important hypothesis.
-
-<div class="figure" style="text-align: center">
-<img src="Results_RD_mod_files/figure-html/effect_RD-1.png" alt="Effects of fundamental and realised response diversity (measured as imbalance) on total community biomass temporal stability."  />
-<p class="caption">(\#fig:effect_RD)Effects of fundamental and realised response diversity (measured as imbalance) on total community biomass temporal stability.</p>
-</div>
-
-We can see that imbalance is always negatively related to temporal stability, which means that response diversity promotes stability across richness levels. Interestingly, we see that there is little difference between fundamental and realised imbalance. Yet, as the richness increases, the relationship between realised imbalance and stability becomes steeper compared to fundamental imbalance. 
-
-
-We look also at the relationship between divergence (our original response diversity metric)
+We look at the relationship between divergence (our original response diversity metric)
 
 <div class="figure" style="text-align: center">
 <img src="Results_RD_mod_files/figure-html/divergence_CV-1.png" alt="Relationship between Divergence and temporal stability of total community biomass."  />
 <p class="caption">(\#fig:divergence_CV)Relationship between Divergence and temporal stability of total community biomass.</p>
 </div>
+
+Divergence is negatively related to temporal stability, suggesting that response diversity promotes stability. However, the relationship between divergence and stability becomes weaker as richness increases. This is why, after running the experiment, we developed another metric to measure response diversity, which we called balance, and that is presented in the main text of the publication. 
+
+Here, we provide extensive evidence of why balance is a better metric to measure response diversity than divergence, and thus justifying focusing the analysis around balance.
+
+# Comparing Divergence and Balance
+
+We fist compare the predictive power of divergence vs balance. 
+
+
+
+Balance
+
+``` r
+# 
+
+mod1 <- lm(data=complete_aggr,log10(stability)~log10(balance_f))
+check_model(mod1)
+```
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+
+``` r
+performance(mod1)
+```
+
+```
+## # Indices of model performance
+## 
+## AIC     |    AICc |     BIC |    R2 | R2 (adj.) |  RMSE | Sigma
+## ---------------------------------------------------------------
+## -89.273 | -89.173 | -78.794 | 0.192 |     0.188 | 0.151 | 0.152
+```
+
+
+Divergence
+
+``` r
+mod2 <- lm(data=complete_aggr,log10(stability)~(divergence))
+check_model(mod2)
+```
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
+
+
+``` r
+performance(mod2)
+```
+
+```
+## # Indices of model performance
+## 
+## AIC     |    AICc |     BIC |    R2 | R2 (adj.) |  RMSE | Sigma
+## ---------------------------------------------------------------
+## -55.716 | -55.615 | -45.237 | 0.072 |     0.068 | 0.162 | 0.163
+```
+
+
+Divergence and balance are both negatively related to stability, but balance explains more of the variance in stability than divergence.
+
+Moreover, from the plot above, it looks like divergence declines in performance as richness increases. Let's test this analyticaly.
+
+
+``` r
+# getting model estimates for each richness level
+lm_divergence_richness_E <- complete_aggr %>%
+  nest(data = -richness) %>%
+  mutate(
+    model = map(data, ~ lm(log10(stability) ~ scale(divergence), data = .x)),
+    results = map(model, broom::tidy)
+  ) %>%
+  unnest(results) %>% dplyr::filter(term=="scale(divergence)") 
+
+
+# getting model R squared for each richness level
+
+lm_divergence_richness_R <- complete_aggr %>%
+  nest(data = -richness) %>%
+  mutate(
+    model = map(data, ~ lm(log10(stability) ~ scale(divergence), data = .x)),
+    results = map(model, broom::glance)
+  ) %>%
+  unnest(results) 
+
+lm_divergence_richness_R
+```
+
+```
+## # A tibble: 3 × 15
+##   richness data     model  r.squared adj.r.squared sigma statistic p.value    df
+##   <fct>    <list>   <list>     <dbl>         <dbl> <dbl>     <dbl>   <dbl> <dbl>
+## 1 2        <tibble> <lm>      0.201         0.191  0.209     19.9  2.66e-5     1
+## 2 3        <tibble> <lm>      0.172         0.161  0.108     16.4  1.19e-4     1
+## 3 4        <tibble> <lm>      0.0337        0.0215 0.129      2.76 1.01e-1     1
+## # ℹ 6 more variables: logLik <dbl>, AIC <dbl>, BIC <dbl>, deviance <dbl>,
+## #   df.residual <int>, nobs <int>
+```
+
+
+
+``` r
+# getting model estimatesf or each richness level
+lm_balance_richness_E <- complete_aggr %>%
+  nest(data = -richness) %>%
+  mutate(
+    model = map(data, ~ lm(log10(stability) ~ scale(log10(balance_f)), data = .x)),
+    results = map(model, broom::tidy)
+  ) %>%
+  unnest(results) %>% dplyr::filter(term=="scale(log10(balance_f))") 
+
+summary(lm(log10(stability) ~ scale((divergence)), data = complete_aggr))
+```
+
+```
+## 
+## Call:
+## lm(formula = log10(stability) ~ scale((divergence)), data = complete_aggr)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.41454 -0.08948 -0.00742  0.09164  0.65272 
+## 
+## Coefficients:
+##                     Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)         -0.24267    0.01042 -23.278  < 2e-16 ***
+## scale((divergence))  0.04520    0.01045   4.327 2.22e-05 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.1625 on 241 degrees of freedom
+## Multiple R-squared:  0.07208,	Adjusted R-squared:  0.06823 
+## F-statistic: 18.72 on 1 and 241 DF,  p-value: 2.218e-05
+```
+
+``` r
+# getting model R squared for each richness level
+lm_balance_richness_R <- complete_aggr %>%
+  nest(data = -richness) %>%
+  mutate(
+    model = map(data, ~ lm(log10(stability) ~ scale(log10(balance_f)), data = .x)),
+    results = map(model, broom::glance)
+  ) %>%
+  unnest(results) 
+
+lm_balance_richness_R
+```
+
+```
+## # A tibble: 3 × 15
+##   richness data     model  r.squared adj.r.squared sigma statistic p.value    df
+##   <fct>    <list>   <list>     <dbl>         <dbl> <dbl>     <dbl>   <dbl> <dbl>
+## 1 2        <tibble> <lm>       0.188         0.177 0.210      18.2 5.36e-5     1
+## 2 3        <tibble> <lm>       0.232         0.222 0.104      23.8 5.44e-6     1
+## 3 4        <tibble> <lm>       0.272         0.263 0.112      29.6 5.84e-7     1
+## # ℹ 6 more variables: logLik <dbl>, AIC <dbl>, BIC <dbl>, deviance <dbl>,
+## #   df.residual <int>, nobs <int>
+```
+
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+
+We can see that the relationship between divergence and stability becomes weaker as richness increases, while the relationship between balance and stability remains stable across richness levels. 
+
+
+Now we build a linear model were stability is modelled as a function of balance and divergence. 
+Then, we compared the variance explained by the full model compared to a model containing either only balance or only divergence.
+
+
+``` r
+lm_div_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f)+divergence)
+check_model(lm_div_balance)
+```
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+
+
+``` r
+performance(lm_div_balance)
+```
+
+```
+## # Indices of model performance
+## 
+## AIC     |    AICc |     BIC |    R2 | R2 (adj.) |  RMSE | Sigma
+## ---------------------------------------------------------------
+## -88.977 | -88.809 | -75.005 | 0.197 |     0.191 | 0.151 | 0.151
+```
+model with only divergence
+
+``` r
+lm_div <- lm(data=complete_aggr,log10(stability)~divergence)
+check_model(lm_div)
+```
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
+
+
+
+``` r
+performance(lm_div)
+```
+
+```
+## # Indices of model performance
+## 
+## AIC     |    AICc |     BIC |    R2 | R2 (adj.) |  RMSE | Sigma
+## ---------------------------------------------------------------
+## -55.716 | -55.615 | -45.237 | 0.072 |     0.068 | 0.162 | 0.163
+```
+
+model with only balance
+
+``` r
+lm_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f))
+check_model(lm_balance)
+```
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
+
+
+```
+## # Indices of model performance
+## 
+## AIC     |    AICc |     BIC |    R2 | R2 (adj.) |  RMSE | Sigma
+## ---------------------------------------------------------------
+## -89.273 | -89.173 | -78.794 | 0.192 |     0.188 | 0.151 | 0.152
+```
+
+
+
+``` r
+anova(lm_div_balance,  lm_balance)
+```
+
+```
+## Analysis of Variance Table
+## 
+## Model 1: log10(stability) ~ log10(balance_f) + divergence
+## Model 2: log10(stability) ~ log10(balance_f)
+##   Res.Df    RSS Df Sum of Sq      F Pr(>F)
+## 1    240 5.5044                           
+## 2    241 5.5432 -1 -0.038724 1.6884 0.1951
+```
+
+
+
+``` r
+anova(lm_div_balance,  lm_div)
+```
+
+```
+## Analysis of Variance Table
+## 
+## Model 1: log10(stability) ~ log10(balance_f) + divergence
+## Model 2: log10(stability) ~ divergence
+##   Res.Df    RSS Df Sum of Sq      F    Pr(>F)    
+## 1    240 5.5044                                  
+## 2    241 6.3640 -1  -0.85959 37.479 3.741e-09 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+Balance explains more of the variance in stability than divergence, and there is virtually no difference between a model containing only balance and the full model.
+Richness had to transformed to numeric and to be centered to avoid collinearity with divergence
+
+``` r
+lm_rich_div <- lm(data=complete_aggr,log10(stability)~divergence*scale(as.numeric(richness)))
+check_model(lm_rich_div)
+```
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
+
+
+``` r
+anova(lm_rich_div)
+```
+
+```
+## Analysis of Variance Table
+## 
+## Response: log10(stability)
+##                                         Df Sum Sq Mean Sq F value    Pr(>F)    
+## divergence                               1 0.4943 0.49435 19.8282 1.301e-05 ***
+## scale(as.numeric(richness))              1 0.1558 0.15579  6.2487  0.013100 *  
+## divergence:scale(as.numeric(richness))   1 0.2496 0.24958 10.0106  0.001758 ** 
+## Residuals                              239 5.9587 0.02493                      
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+
+Divergence significantly interact with richness, suggesting that the relationship between divergence and stability changes with richness. 
+While an ideal metric of response diversity should be independent of richness.
+
+
+We repeat the same model using balance instead of divergence.
+
+``` r
+lm_rich_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f)*scale(as.numeric(richness)))
+check_model(lm_rich_balance)
+```
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-23-1.png)<!-- -->
+
+
+``` r
+anova(lm_rich_balance)
+```
+
+```
+## Analysis of Variance Table
+## 
+## Response: log10(stability)
+##                                               Df Sum Sq Mean Sq F value
+## log10(balance_f)                               1 1.3152 1.31522 57.1274
+## scale(as.numeric(richness))                    1 0.0003 0.00028  0.0122
+## log10(balance_f):scale(as.numeric(richness))   1 0.0405 0.04050  1.7589
+## Residuals                                    239 5.5024 0.02302        
+##                                                 Pr(>F)    
+## log10(balance_f)                             8.694e-13 ***
+## scale(as.numeric(richness))                     0.9123    
+## log10(balance_f):scale(as.numeric(richness))    0.1860    
+## Residuals                                                 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+Balance does not significantly interact with richness, suggesting that the relationship between balance and stability is stable across richness levels.
+
+Finally, we assess variable importance using the relative importance of predictors in the full model.
+We use the package vip (https://cran.r-project.org/web/packages/vip/vignettes/vip.html) to calculate the relative importance of predictors in the full model.
+The function vip::vip for multiple linear regression, or linear models (LMs), uses the absolute value of the 𝑡
+-statistic  as a measure of VI.7. Motivation for the use of the associated 𝑡-statistic is given in Bring (1994) [https://www.tandfonline.com/doi/abs/10.1080/00031305.1994.10476059].
+
+
+``` r
+vip::vip(lm_div_balance)
+```
+
+![](Results_RD_mod_files/figure-html/unnamed-chunk-25-1.png)<!-- -->
+
+
+We believe that the extensive evidence here provided justifies focusing the analysis around balance, and not divergence, as a metric of response diversity.
+We will thus only look at balance for the rest of the analysis. 
+
+
+
+### Effect RD
+
+We are now going to look at how response diversity (balance) affected temporal stability of total community biomass. We are going to look at the relationship between fundamental baalance (so based only on species response surfaces measured in monoculture), an realised balance (measured accounting for species contribution to balance).
+
+This is fundamentally testing our most important hypothesis.
+
+<div class="figure" style="text-align: center">
+<img src="Results_RD_mod_files/figure-html/effect_RD-1.png" alt="Effects of fundamental and realised response diversity (measured as balance) on total community biomass temporal stability."  />
+<p class="caption">(\#fig:effect_RD)Effects of fundamental and realised response diversity (measured as balance) on total community biomass temporal stability.</p>
+</div>
+
+We can see that balance is always negatively related to temporal stability, which means that response diversity promotes stability across richness levels. Interestingly, we see that there is little difference between fundamental and realised balance. Yet, as the richness increases, the relationship between realised balance and stability becomes steeper compared to fundamental balance. 
+
+
 We can see that the positive relationship between temporal stability and response diversity measured as divergence holds, but it becomes shallower as richness increases. We could speculated that this due to divergence considering only the responses of the 2 most "responding" species. Thus, when species richness increases, disregarding the responses of the other species in the community except the 2 responding the most makes the relationship between response diversity and stability weaker. 
 
 
 # Linear models
 
 
-## Model: Fundamental Imbalance
+## Model: Fundamental balance
 
-First we analyze the effect of fundamental imbalance, temperature, nutrients and richness on biomass temporal stability using a linear model. 
-imbalance and richness were modelled as continuous variables, while temperature and nutrients were modelled as categorical variables. Imbalance was log-transformed to meet the assumptions of linear models.
+First we analyze the effect of fundamental balance, temperature, nutrients and richness on biomass temporal stability using a linear model. 
+balance and richness were modelled as continuous variables, while temperature and nutrients were modelled as categorical variables. balance was log-transformed to meet the assumptions of linear models.
 
 
 
 
 
 ``` r
-lm_full<-lm(data=complete_aggr,log10(stability)~log10(imbalance_f)+as.numeric(richness)+nutrients+temperature)
+lm_full<-lm(data=complete_aggr,log10(stability)~log10(balance_f)+as.numeric(richness)+nutrients+temperature)
 ```
 
 
@@ -224,7 +469,7 @@ Check model's assumptions
 ```
 ## 
 ## Call:
-## lm(formula = log10(stability) ~ log10(imbalance_f) + as.numeric(richness) + 
+## lm(formula = log10(stability) ~ log10(balance_f) + as.numeric(richness) + 
 ##     nutrients + temperature, data = complete_aggr)
 ## 
 ## Residuals:
@@ -234,7 +479,7 @@ Check model's assumptions
 ## Coefficients:
 ##                       Estimate Std. Error t value Pr(>|t|)    
 ## (Intercept)          -0.350905   0.033407 -10.504  < 2e-16 ***
-## log10(imbalance_f)   -0.050863   0.016041  -3.171  0.00172 ** 
+## log10(balance_f)     -0.050863   0.016041  -3.171  0.00172 ** 
 ## as.numeric(richness) -0.006457   0.009431  -0.685  0.49425    
 ## nutrients0.35 g/L     0.179918   0.018750   9.596  < 2e-16 ***
 ## nutrients0.75 g/L     0.213112   0.019473  10.944  < 2e-16 ***
@@ -249,20 +494,34 @@ Check model's assumptions
 ```
 
 
-A linear model was fitted to examine the effects of resource imbalance, richness, nutrients, and temperature on community stability (measured as log₁₀(stability)). The model explained a significant portion of the variance (Adjusted R² = 0.5115, F(7, 235) = 37.2, p < 2.2e-16).
+```
+## Analysis of Variance Table
+## 
+## Response: log10(stability)
+##                       Df Sum Sq Mean Sq F value    Pr(>F)    
+## log10(balance_f)       1 1.3152 1.31522 93.4656 < 2.2e-16 ***
+## as.numeric(richness)   1 0.0003 0.00028  0.0199    0.8879    
+## nutrients              2 1.8841 0.94203 66.9447 < 2.2e-16 ***
+## temperature            2 0.3379 0.16896 12.0071 1.081e-05 ***
+## Residuals            236 3.3209 0.01407                      
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+A linear model was fitted to examine the effects of resource balance, richness, nutrients, and temperature on community stability (measured as log₁₀(stability)). The model explained a significant portion of the variance (Adjusted R² = 0.5115, F(7, 235) = 37.2, p < 2.2e-16).
 
 The intercept of the model was estimated at -0.349 (SE = 0.028, p < 2e-16), indicating the baseline log₁₀(stability) when all predictor variables are at their reference levels.
 
-Among the predictors, log₁₀(imbalance) showed a significant negative effect on stability (Estimate = -0.054, SE = 0.016, p = 0.0009). This suggests that as imbalance increases (more balance), stability tends to decrease.
+Among the predictors, log₁₀(balance) showed a significant negative effect on stability (Estimate = -0.054, SE = 0.016, p = 0.0009). This suggests that as balance increases (more balance), stability tends to decrease.
 
 
 Nutrient concentration also had a significant positive effect on stability, with estimates for 0.35 g/L (Estimate = 0.180, SE = 0.019, p < 2e-16) and 0.75 g/L (Estimate = 0.212, SE = 0.019, p < 2e-16) indicating increased stability with higher nutrient levels.
 
 Finally, temperature regimes showed a significant effect on stability. Both 22–25 °C (Estimate = -0.078, SE = 0.019, p = 3.81e-05) and 25–28 °C (Estimate = -0.098, SE = 0.025, p = 8.44e-05) significantly reduced stability when compared to the baseline (18–21 °C).
 
-Richness did not show a significant effect on stability (Estimate = 0.002, SE = 0.019, p = 0.91), which suggests that it is not richness per se that affects stability in this system. Similar results have been previously reported in the literature, e.g. (Petchey et al. 2002)[https://nsojournals.onlinelibrary.wiley.com/doi/full/10.1034/j.1600-0706.2002.990203.x?casa_token=THaSxpjziQcAAAAA%3Ay_0gJhnL_rcPsrolHEmZvI0VF14a43WRDTy_UB_kDPQOxq2EA98NQT65Co63J58NCeW-SiTIjoDkgelQ] who found that species richness did not significantly impact temporal stability in fluctuating environment.
+Richness did not show a significant effect on stability (Estimate = 0.002, SE = 0.019, p = 0.91), which suggests that it is not richness *per se* that affects stability in this system. Similar results have been previously reported in the literature, e.g. (Petchey et al. 2002)[https://nsojournals.onlinelibrary.wiley.com/doi/full/10.1034/j.1600-0706.2002.990203.x?casa_token=THaSxpjziQcAAAAA%3Ay_0gJhnL_rcPsrolHEmZvI0VF14a43WRDTy_UB_kDPQOxq2EA98NQT65Co63J58NCeW-SiTIjoDkgelQ] and (Gonzalez and Descamps-Julien 2004) [https://nsojournals.onlinelibrary.wiley.com/doi/full/10.1111/j.0030-1299.2004.12925.x?casa_token=4OtlkUcK3YgAAAAA%3ASFjll62wMQW8CBV9qDe5lbGGDXVcRiWna6slN1GaVvTMSRJKDAnpSd_jEBsFKKRsL7muxbJ0Tv3T] who found that species richness did not significantly impact temporal stability in fluctuating environment.
 
-In summary, our findings show that temporal stability is significantly influenced by response diversity (imbalance), nutrient concentration, and temperature, with higher nutrient concentrations enhancing stability and higher temperatures reducing it. However, species richness was not a significant determinant of stability within the conditions of this study.
+In summary, our findings show that temporal stability is significantly influenced by response diversity (balance), nutrient concentration, and temperature, with higher nutrient concentrations enhancing stability and higher temperatures reducing it. However, species richness was not a significant determinant of stability within the conditions of this study.
 
 Prepare publication-ready table 
 
@@ -270,365 +529,533 @@ Summary table
 
 
 
-<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
- <thead>
-  <tr>
-   <th style="text-align:center;"> Term </th>
-   <th style="text-align:center;"> Estimate </th>
-   <th style="text-align:center;"> Lower 95% CI </th>
-   <th style="text-align:center;"> Upper 95% CI </th>
-   <th style="text-align:center;"> t value </th>
-   <th style="text-align:center;"> p-value </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> (Intercept) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.351 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.417 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.285 </td>
-   <td style="text-align:center;font-weight: bold;"> -10.504 </td>
-   <td style="text-align:center;font-weight: bold;"> 2.01e-21 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> log10(imbalance_f) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.051 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.082 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.019 </td>
-   <td style="text-align:center;font-weight: bold;"> -3.171 </td>
-   <td style="text-align:center;font-weight: bold;"> 1.72e-03 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> as.numeric(richness) </td>
-   <td style="text-align:center;"> -0.006 </td>
-   <td style="text-align:center;"> -0.025 </td>
-   <td style="text-align:center;"> 0.012 </td>
-   <td style="text-align:center;"> -0.685 </td>
-   <td style="text-align:center;"> 4.94e-01 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> nutrients0.35 g/L </td>
-   <td style="text-align:center;font-weight: bold;"> 0.180 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.143 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.217 </td>
-   <td style="text-align:center;font-weight: bold;"> 9.596 </td>
-   <td style="text-align:center;font-weight: bold;"> 1.27e-18 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> nutrients0.75 g/L </td>
-   <td style="text-align:center;font-weight: bold;"> 0.213 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.175 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.251 </td>
-   <td style="text-align:center;font-weight: bold;"> 10.944 </td>
-   <td style="text-align:center;font-weight: bold;"> 8.20e-23 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> temperature22-25 °C </td>
-   <td style="text-align:center;font-weight: bold;"> -0.078 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.115 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.041 </td>
-   <td style="text-align:center;font-weight: bold;"> -4.176 </td>
-   <td style="text-align:center;font-weight: bold;"> 4.18e-05 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> temperature25-28 °C </td>
-   <td style="text-align:center;font-weight: bold;"> -0.101 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.150 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.052 </td>
-   <td style="text-align:center;font-weight: bold;"> -4.083 </td>
-   <td style="text-align:center;font-weight: bold;"> 6.10e-05 </td>
-  </tr>
-</tbody>
+
+```{=html}
+<div id="rlrxrsctnq" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#rlrxrsctnq table {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#rlrxrsctnq thead, #rlrxrsctnq tbody, #rlrxrsctnq tfoot, #rlrxrsctnq tr, #rlrxrsctnq td, #rlrxrsctnq th {
+  border-style: none;
+}
+
+#rlrxrsctnq p {
+  margin: 0;
+  padding: 0;
+}
+
+#rlrxrsctnq .gt_table {
+  display: table;
+  border-collapse: collapse;
+  line-height: normal;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_caption {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+#rlrxrsctnq .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#rlrxrsctnq .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 3px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#rlrxrsctnq .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#rlrxrsctnq .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#rlrxrsctnq .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#rlrxrsctnq .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#rlrxrsctnq .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#rlrxrsctnq .gt_spanner_row {
+  border-bottom-style: hidden;
+}
+
+#rlrxrsctnq .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  text-align: left;
+}
+
+#rlrxrsctnq .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#rlrxrsctnq .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#rlrxrsctnq .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#rlrxrsctnq .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#rlrxrsctnq .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#rlrxrsctnq .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+
+#rlrxrsctnq .gt_row_group_first td {
+  border-top-width: 2px;
+}
+
+#rlrxrsctnq .gt_row_group_first th {
+  border-top-width: 2px;
+}
+
+#rlrxrsctnq .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#rlrxrsctnq .gt_first_summary_row {
+  border-top-style: solid;
+  border-top-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+
+#rlrxrsctnq .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#rlrxrsctnq .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_last_grand_summary_row_top {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: double;
+  border-bottom-width: 6px;
+  border-bottom-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#rlrxrsctnq .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#rlrxrsctnq .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#rlrxrsctnq .gt_sourcenote {
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#rlrxrsctnq .gt_left {
+  text-align: left;
+}
+
+#rlrxrsctnq .gt_center {
+  text-align: center;
+}
+
+#rlrxrsctnq .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#rlrxrsctnq .gt_font_normal {
+  font-weight: normal;
+}
+
+#rlrxrsctnq .gt_font_bold {
+  font-weight: bold;
+}
+
+#rlrxrsctnq .gt_font_italic {
+  font-style: italic;
+}
+
+#rlrxrsctnq .gt_super {
+  font-size: 65%;
+}
+
+#rlrxrsctnq .gt_footnote_marks {
+  font-size: 75%;
+  vertical-align: 0.4em;
+  position: initial;
+}
+
+#rlrxrsctnq .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+
+#rlrxrsctnq .gt_indent_1 {
+  text-indent: 5px;
+}
+
+#rlrxrsctnq .gt_indent_2 {
+  text-indent: 10px;
+}
+
+#rlrxrsctnq .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#rlrxrsctnq .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#rlrxrsctnq .gt_indent_5 {
+  text-indent: 25px;
+}
+
+#rlrxrsctnq .katex-display {
+  display: inline-flex !important;
+  margin-bottom: 0.75em !important;
+}
+
+#rlrxrsctnq div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+  height: 0px !important;
+}
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+  <thead>
+    <tr class="gt_col_headings">
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="label"><span class='gt_from_md'><strong>Characteristic</strong></span></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="estimate"><span class='gt_from_md'><strong>Beta</strong></span></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="conf.low"><span class='gt_from_md'><strong>95% CI</strong></span><span class="gt_footnote_marks" style="white-space:nowrap;font-style:italic;font-weight:normal;line-height:0;"><sup>1</sup></span></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1" scope="col" id="p.value"><span class='gt_from_md'><strong>p-value</strong></span></th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td headers="label" class="gt_row gt_left">log10(balance_f)</td>
+<td headers="estimate" class="gt_row gt_center">-0.05</td>
+<td headers="conf.low" class="gt_row gt_center">-0.08, -0.02</td>
+<td headers="p.value" class="gt_row gt_center">0.002</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">as.numeric(richness)</td>
+<td headers="estimate" class="gt_row gt_center">-0.01</td>
+<td headers="conf.low" class="gt_row gt_center">-0.03, 0.01</td>
+<td headers="p.value" class="gt_row gt_center">0.5</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">nutrients</td>
+<td headers="estimate" class="gt_row gt_center"><br /></td>
+<td headers="conf.low" class="gt_row gt_center"><br /></td>
+<td headers="p.value" class="gt_row gt_center"><br /></td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    0.01 g/L</td>
+<td headers="estimate" class="gt_row gt_center">—</td>
+<td headers="conf.low" class="gt_row gt_center">—</td>
+<td headers="p.value" class="gt_row gt_center"><br /></td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    0.35 g/L</td>
+<td headers="estimate" class="gt_row gt_center">0.18</td>
+<td headers="conf.low" class="gt_row gt_center">0.14, 0.22</td>
+<td headers="p.value" class="gt_row gt_center"><0.001</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    0.75 g/L</td>
+<td headers="estimate" class="gt_row gt_center">0.21</td>
+<td headers="conf.low" class="gt_row gt_center">0.17, 0.25</td>
+<td headers="p.value" class="gt_row gt_center"><0.001</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">temperature</td>
+<td headers="estimate" class="gt_row gt_center"><br /></td>
+<td headers="conf.low" class="gt_row gt_center"><br /></td>
+<td headers="p.value" class="gt_row gt_center"><br /></td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    18-21 °C</td>
+<td headers="estimate" class="gt_row gt_center">—</td>
+<td headers="conf.low" class="gt_row gt_center">—</td>
+<td headers="p.value" class="gt_row gt_center"><br /></td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    22-25 °C</td>
+<td headers="estimate" class="gt_row gt_center">-0.08</td>
+<td headers="conf.low" class="gt_row gt_center">-0.11, -0.04</td>
+<td headers="p.value" class="gt_row gt_center"><0.001</td></tr>
+    <tr><td headers="label" class="gt_row gt_left">    25-28 °C</td>
+<td headers="estimate" class="gt_row gt_center">-0.10</td>
+<td headers="conf.low" class="gt_row gt_center">-0.15, -0.05</td>
+<td headers="p.value" class="gt_row gt_center"><0.001</td></tr>
+  </tbody>
+  
+  <tfoot class="gt_footnotes">
+    <tr>
+      <td class="gt_footnote" colspan="4"><span class="gt_footnote_marks" style="white-space:nowrap;font-style:italic;font-weight:normal;line-height:0;"><sup>1</sup></span> <span class='gt_from_md'>CI = Confidence Interval</span></td>
+    </tr>
+  </tfoot>
 </table>
-
-## Model: Relised Imbalance
-Then we analyze the effect of realised imbalance, temperature, nutrients and richness on biomass temporal stability using a linear model. 
-
-
-
-``` r
-lm_full_w<-lm(data=complete_aggr,log10(stability)~log10(imbalance_r)+as.numeric(richness)+nutrients+temperature)
-```
-
-check model's assumptions
-<div class="figure" style="text-align: center">
-<img src="Results_RD_mod_files/figure-html/model_check2-1.png" alt="model check 2."  />
-<p class="caption">(\#fig:model_check2)model check 2.</p>
 </div>
-
-Summary table
-
-
-<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
- <thead>
-  <tr>
-   <th style="text-align:center;"> Term </th>
-   <th style="text-align:center;"> Estimate </th>
-   <th style="text-align:center;"> Lower 95% CI </th>
-   <th style="text-align:center;"> Upper 95% CI </th>
-   <th style="text-align:center;"> t value </th>
-   <th style="text-align:center;"> p-value </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> (Intercept) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.359 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.446 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.272 </td>
-   <td style="text-align:center;font-weight: bold;"> -8.134 </td>
-   <td style="text-align:center;font-weight: bold;"> 2.36e-14 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> log10(imbalance_r) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.055 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.105 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.005 </td>
-   <td style="text-align:center;font-weight: bold;"> -2.153 </td>
-   <td style="text-align:center;font-weight: bold;"> 3.23e-02 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;"> as.numeric(richness) </td>
-   <td style="text-align:center;"> -0.017 </td>
-   <td style="text-align:center;"> -0.036 </td>
-   <td style="text-align:center;"> 0.003 </td>
-   <td style="text-align:center;"> -1.707 </td>
-   <td style="text-align:center;"> 8.91e-02 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> nutrients0.35 g/L </td>
-   <td style="text-align:center;font-weight: bold;"> 0.182 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.145 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.220 </td>
-   <td style="text-align:center;font-weight: bold;"> 9.631 </td>
-   <td style="text-align:center;font-weight: bold;"> 9.97e-19 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> nutrients0.75 g/L </td>
-   <td style="text-align:center;font-weight: bold;"> 0.218 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.179 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.257 </td>
-   <td style="text-align:center;font-weight: bold;"> 11.048 </td>
-   <td style="text-align:center;font-weight: bold;"> 3.81e-23 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> temperature22-25 °C </td>
-   <td style="text-align:center;font-weight: bold;"> -0.079 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.116 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.042 </td>
-   <td style="text-align:center;font-weight: bold;"> -4.194 </td>
-   <td style="text-align:center;font-weight: bold;"> 3.88e-05 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> temperature25-28 °C </td>
-   <td style="text-align:center;font-weight: bold;"> -0.110 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.164 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.057 </td>
-   <td style="text-align:center;font-weight: bold;"> -4.068 </td>
-   <td style="text-align:center;font-weight: bold;"> 6.47e-05 </td>
-  </tr>
-</tbody>
-</table>
-
-
-## Model: Divergence
-Finally we analyze the effect of divergence, temperature, nutrients and richness on biomass temporal stability using a linear model. 
-
-
-``` r
-lm_divergence<-lm(data=complete_aggr,log10(stability)~divergence + as.numeric(richness)+nutrients+temperature)
 ```
 
 
-Check model's assumptions
-<div class="figure" style="text-align: center">
-<img src="Results_RD_mod_files/figure-html/model_check3-1.png" alt="model check 3."  />
-<p class="caption">(\#fig:model_check3)model check 3.</p>
-</div>
-
-Summary table
-
-
-<table class="table table-striped table-hover table-condensed" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
- <thead>
-  <tr>
-   <th style="text-align:center;"> Term </th>
-   <th style="text-align:center;"> Estimate </th>
-   <th style="text-align:center;"> Lower 95% CI </th>
-   <th style="text-align:center;"> Upper 95% CI </th>
-   <th style="text-align:center;"> t value </th>
-   <th style="text-align:center;"> p-value </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> (Intercept) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.270 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.320 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.220 </td>
-   <td style="text-align:center;font-weight: bold;"> -10.637 </td>
-   <td style="text-align:center;font-weight: bold;"> 7.65e-22 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> divergence </td>
-   <td style="text-align:center;font-weight: bold;"> 0.088 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.037 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.138 </td>
-   <td style="text-align:center;font-weight: bold;"> 3.389 </td>
-   <td style="text-align:center;font-weight: bold;"> 8.21e-04 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> as.numeric(richness) </td>
-   <td style="text-align:center;font-weight: bold;"> -0.023 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.043 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.003 </td>
-   <td style="text-align:center;font-weight: bold;"> -2.309 </td>
-   <td style="text-align:center;font-weight: bold;"> 2.18e-02 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> nutrients0.35 g/L </td>
-   <td style="text-align:center;font-weight: bold;"> 0.182 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.145 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.219 </td>
-   <td style="text-align:center;font-weight: bold;"> 9.776 </td>
-   <td style="text-align:center;font-weight: bold;"> 3.61e-19 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> nutrients0.75 g/L </td>
-   <td style="text-align:center;font-weight: bold;"> 0.209 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.170 </td>
-   <td style="text-align:center;font-weight: bold;"> 0.248 </td>
-   <td style="text-align:center;font-weight: bold;"> 10.588 </td>
-   <td style="text-align:center;font-weight: bold;"> 1.09e-21 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> temperature22-25 °C </td>
-   <td style="text-align:center;font-weight: bold;"> -0.090 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.127 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.054 </td>
-   <td style="text-align:center;font-weight: bold;"> -4.824 </td>
-   <td style="text-align:center;font-weight: bold;"> 2.52e-06 </td>
-  </tr>
-  <tr>
-   <td style="text-align:center;font-weight: bold;"> temperature25-28 °C </td>
-   <td style="text-align:center;font-weight: bold;"> -0.152 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.189 </td>
-   <td style="text-align:center;font-weight: bold;"> -0.115 </td>
-   <td style="text-align:center;font-weight: bold;"> -8.174 </td>
-   <td style="text-align:center;font-weight: bold;"> 1.83e-14 </td>
-  </tr>
-</tbody>
-</table>
-
-
-
-```
-## Analysis of Variance Table
-## 
-## Model 1: log10(stability) ~ log10(imbalance_f) + as.numeric(richness) + 
-##     nutrients + temperature
-## Model 2: log10(stability) ~ log10(imbalance_r) + as.numeric(richness) + 
-##     nutrients + temperature
-## Model 3: log10(stability) ~ divergence + as.numeric(richness) + nutrients + 
-##     temperature
-##   Res.Df    RSS Df Sum of Sq F Pr(>F)
-## 1    236 3.3209                      
-## 2    236 3.3957  0 -0.074784         
-## 3    236 3.3017  0  0.094008
-```
-
-
-```
-##               df       AIC
-## lm_full        8 -337.5510
-## lm_full_w      8 -332.1396
-## lm_divergence  8 -338.9618
-```
-
-![](Results_RD_mod_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
-
-```
-## 
-## Call:
-## lm(formula = log10(stability) ~ log10(imbalance_f), data = complete_aggr)
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.45292 -0.08388  0.00328  0.08204  0.53061 
-## 
-## Coefficients:
-##                    Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)        -0.34850    0.01704 -20.446  < 2e-16 ***
-## log10(imbalance_f) -0.10806    0.01429  -7.562 8.32e-13 ***
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 0.1517 on 241 degrees of freedom
-## Multiple R-squared:  0.1918,	Adjusted R-squared:  0.1884 
-## F-statistic: 57.18 on 1 and 241 DF,  p-value: 8.317e-13
-```
-
-
-
-![](Results_RD_mod_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
-
-```
-## 
-## Call:
-## lm(formula = log10(stability) ~ (divergence), data = complete_aggr)
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.41454 -0.08948 -0.00742  0.09164  0.65272 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) -0.27915    0.01341 -20.819  < 2e-16 ***
-## divergence   0.13421    0.03102   4.327 2.22e-05 ***
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 0.1625 on 241 degrees of freedom
-## Multiple R-squared:  0.07208,	Adjusted R-squared:  0.06823 
-## F-statistic: 18.72 on 1 and 241 DF,  p-value: 2.218e-05
-```
-
-![](Results_RD_mod_files/figure-html/unnamed-chunk-23-1.png)<!-- -->
-
-```
-## 
-## Call:
-## lm(formula = log10(stability) ~ log10(imbalance_r), data = complete_aggr)
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.44831 -0.07679  0.00482  0.07732  0.52305 
-## 
-## Coefficients:
-##                    Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)        -0.44115    0.03166 -13.933  < 2e-16 ***
-## log10(imbalance_r) -0.13683    0.02072  -6.604 2.53e-10 ***
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 0.1552 on 241 degrees of freedom
-## Multiple R-squared:  0.1532,	Adjusted R-squared:  0.1497 
-## F-statistic: 43.61 on 1 and 241 DF,  p-value: 2.533e-10
-```
 ### sum vs. weighted_sum
 
-We now look at how fundamental and realised imbalance are related to each other. 
+We now look at how fundamental and realised balance are related to each other. 
 
 <div class="figure" style="text-align: center">
-<img src="Results_RD_mod_files/figure-html/Cor_sum_weighted_sum-1.png" alt="Relationship between fundamental and realised imbalance."  />
-<p class="caption">(\#fig:Cor_sum_weighted_sum)Relationship between fundamental and realised imbalance.</p>
+<img src="Results_RD_mod_files/figure-html/Cor_sum_weighted_sum-1.png" alt="Relationship between fundamental and realised balance."  />
+<p class="caption">(\#fig:Cor_sum_weighted_sum)Relationship between fundamental and realised balance.</p>
 </div>
 
 
 
 
 # Asynchrony
-Response diversity (aka imbalance) has been suggested as a mechanism that promotes temporal stability of community biomass by promoting species asynchrony.
+Response diversity (aka balance) has been suggested as a mechanism that promotes temporal stability of community biomass by promoting species asynchrony.
 We thus calculated the asynchrony index suggested by Gross et al. (2014) to calculate the effect of asynchrony on temporal stability and to see how reponse diversity relate to asynchrony.
 The index ranges between -1 and 1, with -1 indicating perfect asyncrony and 1 being perfectly synchronous, and 0 indicating random variation.
 
@@ -640,18 +1067,18 @@ The index ranges between -1 and 1, with -1 indicating perfect asyncrony and 1 be
 <img src="Results_RD_mod_files/figure-html/async_plots-1.png" alt="Relatioship temporal stability and asynchrony (Gross) divided by nutrient level."  />
 <p class="caption">(\#fig:async_plots)Relatioship temporal stability and asynchrony (Gross) divided by nutrient level.</p>
 </div>
-### Plot Asynchrony Gross vs fundamental imbalance
+### Plot Asynchrony Gross vs fundamental balance
 
 <div class="figure" style="text-align: center">
-<img src="Results_RD_mod_files/figure-html/async-1.png" alt="Relatioship between asynchrony and fundamental imbalance divided by nutrient level."  />
-<p class="caption">(\#fig:async)Relatioship between asynchrony and fundamental imbalance divided by nutrient level.</p>
+<img src="Results_RD_mod_files/figure-html/async-1.png" alt="Relatioship between asynchrony and fundamental balance divided by nutrient level."  />
+<p class="caption">(\#fig:async)Relatioship between asynchrony and fundamental balance divided by nutrient level.</p>
 </div>
 
 
 # SEM 
 
 
-Now, we use a structural equation model (SEM) to explore how stability is influenced by asynchrony, temperature, nutrient levels, imbalance, and richness, with asynchrony also modeled as dependent on imbalance, nutrients, and richness.
+Now, we use a structural equation model (SEM) to explore how stability is influenced by asynchrony, temperature, nutrient levels, balance, and richness, with asynchrony also modeled as dependent on balance, nutrients, and richness.
 
 
 
@@ -727,10 +1154,10 @@ Now, we use a structural equation model (SEM) to explore how stability is influe
 ##     asynchrny_Grss      0.195    0.033    5.947    0.000    0.195    0.399
 ##     temperature        -0.049    0.011   -4.454    0.000   -0.049   -0.241
 ##     nutrients           0.147    0.011   13.216    0.000    0.147    0.719
-##     log_imbalanc_f     -0.029    0.012   -2.452    0.014   -0.029   -0.120
+##     log_balance_f      -0.029    0.012   -2.452    0.014   -0.029   -0.120
 ##     richness            0.011    0.010    1.181    0.238    0.011    0.055
 ##   asynchrony_Gross ~                                                      
-##     log_imbalanc_f     -0.080    0.029   -2.719    0.007   -0.080   -0.159
+##     log_balance_f      -0.080    0.029   -2.719    0.007   -0.080   -0.159
 ##     nutrients          -0.210    0.022   -9.373    0.000   -0.210   -0.501
 ##     richness           -0.102    0.023   -4.404    0.000   -0.102   -0.243
 ## 
@@ -768,13 +1195,13 @@ Interpretation of Pathways
 
 *Nutrients*: Positive and highly significant, suggesting that greater nutrient availability enhances stability, possibly through support for higher productivity or resource buffering.
 
-*Imbalance*: Negative and significant effect, where greater imbalance reduces stability.
+*balance*: Negative and significant effect, where greater balance reduces stability.
 Richness: Not significant, indicating that within this model, richness does not have a notable effect on stability.
 
 
 **Asynchrony**:
 
-*Imbalance*: Negative and significant, suggesting that greater imbalance reduces asynchrony.
+*balance*: Negative and significant, suggesting that greater balance reduces asynchrony.
 
 *Nutrients*: Negative and highly significant effect, indicating that higher nutrient concentrations are associated with lower asynchrony, possibly due to homogenizing effects of nutrient availability.
 
@@ -784,468 +1211,86 @@ Richness: Not significant, indicating that within this model, richness does not 
 
 *Stability*: The model explains 57% of the variance in stability, suggesting a substantial amount of stability is accounted for by these factors.
 
-*Asynchrony*: The model explains 30.6% of the variance in asynchrony, indicating that while imbalance, nutrients, and richness contribute, other factors may also play a role in driving asynchrony.
+*Asynchrony*: The model explains 30.6% of the variance in asynchrony, indicating that while balance, nutrients, and richness contribute, other factors may also play a role in driving asynchrony.
 
 **Summary**
 
-This SEM model demonstrates that stability in the ecosystem is positively associated with asynchrony and nutrient levels, but negatively associated with temperature and imbalance. Interestingly, species richness has no direct impact on stability but does reduce asynchrony, indicating indirect complexity in the stability-dynamics relationship. This highlights the role of environmental and community factors in ecosystem stability, with asynchrony serving as a crucial intermediary in maintaining stability in fluctuating conditions.
+This SEM model demonstrates that stability in the ecosystem is positively associated with asynchrony and nutrient levels, but negatively associated with temperature and balance. Interestingly, species richness has no direct impact on stability but does reduce asynchrony, indicating indirect complexity in the stability-dynamics relationship. This highlights the role of environmental and community factors in ecosystem stability, with asynchrony serving as a crucial intermediary in maintaining stability in fluctuating conditions.
 
 <div class="figure" style="text-align: center">
 <img src="SEM.png" alt="SEM." width="718" />
 <p class="caption">(\#fig:SEM)SEM.</p>
 </div>
 
-Structural equation model (SEM) of the relationship between fundamental imbalance, asynchrony, richness, nutrients, temperature and temporal stability. The model shows that fundamental imbalance has a negative effect on asynchrony, which in turn has a positive effect on temporal stability. The model also shows that fundamental imbalance has a direct negative effect on temporal stability. Temperature has a direct negative effect on temporal stability, while nutrients have a direct positive effect on temporal stability. Richness has a direct negative effect on asynchrony, but no direct effect on temporal stability. 
+Structural equation model (SEM) of the relationship between fundamental balance, asynchrony, richness, nutrients, temperature and temporal stability. The model shows that fundamental balance has a negative effect on asynchrony, which in turn has a positive effect on temporal stability. The model also shows that fundamental balance has a direct negative effect on temporal stability. Temperature has a direct negative effect on temporal stability, while nutrients have a direct positive effect on temporal stability. Richness has a direct negative effect on asynchrony, but no direct effect on temporal stability. 
 
 
 
 
+# Species Interactions
 
-<!-- # SEM and balance sim -->
 
-<!-- ```{r interaction RD async} -->
 
-<!-- # simulate random slopes -->
 
 
-<!-- slopes<-rnorm(1000,mean=0,sd=0.1) -->
 
-<!-- mean_s<-mean(df_slopes$slope) -->
-<!-- sd_s<-sd(df_slopes$slope) -->
+check model assumptions
+<div class="figure" style="text-align: center">
+<img src="Results_RD_mod_files/figure-html/model_check_mixed-1.png" alt="model check 1."  />
+<p class="caption">(\#fig:model_check_mixed)model check 1.</p>
+</div>
 
-<!-- RD_df<-lapply(c(2,3,4,10),function(r){ -->
 
-<!--   RD<-lapply(1:1000,function(c){ -->
-<!--   slopes<-rnorm(r,mean=0,sd=sd_s) -->
-<!--   balance<-abs(mean(slopes)) -->
-<!--   divergence<-(max(slopes)-min(slopes)-abs(abs(max(slopes))-abs(min(slopes))))/(max(slopes)-min(slopes)) -->
-<!--   adj_divergence<-abs(sum(slopes))/sum(abs(slopes)) -->
-<!--   avg_magnitude<-mean(abs(slopes)) -->
-<!--   RD_df<-data.frame(balance=balance,divergence=divergence,richness=r,adj_divergence=1-adj_divergence,avg_magnitude=avg_magnitude) -->
 
-<!--   return(RD_df) -->
-<!-- }) -->
-<!--   RD<-do.call("rbind",RD) -->
-<!-- }) -->
+```
+## 
+## Call:
+## lm(formula = log10(stability) ~ log10(balance_f) + nutrients + 
+##     temperature + as.numeric(richness) + mean_interaction, data = int_aggr %>% 
+##     dplyr::filter(theta %in% c("none", "var")))
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.28476 -0.07871 -0.01339  0.05215  0.42394 
+## 
+## Coefficients:
+##                       Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)          -0.361637   0.034009 -10.634  < 2e-16 ***
+## log10(balance_f)     -0.051656   0.016001  -3.228 0.001423 ** 
+## nutrients0.35 g/L     0.191222   0.020048   9.538  < 2e-16 ***
+## nutrients0.75 g/L     0.222208   0.020270  10.962  < 2e-16 ***
+## temperature22-25 °C  -0.073573   0.018844  -3.904 0.000123 ***
+## temperature25-28 °C  -0.096327   0.024842  -3.878 0.000137 ***
+## as.numeric(richness) -0.002464   0.009745  -0.253 0.800622    
+## mean_interaction     -0.044347   0.028417  -1.561 0.119970    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.1183 on 235 degrees of freedom
+## Multiple R-squared:  0.5208,	Adjusted R-squared:  0.5065 
+## F-statistic: 36.48 on 7 and 235 DF,  p-value: < 2.2e-16
+```
 
-<!-- RD_df<-do.call("rbind",RD_df) -->
 
 
-<!-- plot<-ggplot(data=RD_df,aes(x=balance,color=as.factor(richness)))+ -->
-<!--   geom_density() -->
+```
+## Analysis of Variance Table
+## 
+## Response: log10(stability)
+##                       Df Sum Sq Mean Sq F value    Pr(>F)    
+## log10(balance_f)       1 1.3152 1.31522 94.0340 < 2.2e-16 ***
+## nutrients              2 1.8824 0.94120 67.2926 < 2.2e-16 ***
+## temperature            2 0.3333 0.16663 11.9136  1.18e-05 ***
+## as.numeric(richness)   1 0.0066 0.00660  0.4716    0.4929    
+## mean_interaction       1 0.0341 0.03406  2.4354    0.1200    
+## Residuals            235 3.2869 0.01399                      
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
 
-<!-- plot_sim_div_bal<-ggplot(data=RD_df,aes(x=adj_divergence,y=balance,color=avg_magnitude))+ -->
-<!--   geom_point()+ -->
-<!--   facet_wrap(~richness) -->
 
-
-
-
-
-
-<!-- # Ensure the data is ungrouped before applying transformations -->
-<!-- sem_aggr <- async_aggr %>% -->
-<!--   ungroup() %>%  # Ensure there is no grouping -->
-<!--   dplyr::mutate( -->
-<!--     log_abs_sum_slope = log10(imbalance_f), -->
-<!--     stability = log10(1 / CV), -->
-<!--     richness = as.numeric(richness), -->
-<!--     temperature=temperature, -->
-<!--     log_magnitude=log10(magnitude), -->
-<!--     sqrt_symm=sqrt(symmetry), -->
-<!--     log_sum_abs=log10(sum_abs_slope), -->
-<!--     RD=imbalance_f/sum_abs_slope, -->
-<!--     log_syn_Gross=log10(1+synchrony_Gross), -->
-<!--     symmetry_scaled=(symmetry/as.numeric(richness)), -->
-<!--     asyn_Gross= (-synchrony_Gross), -->
-<!--     log_asyn_Gross=log10((-synchrony_Gross)+1), -->
-<!--     log_sum_abs_slope=log10(sum_abs_slope) -->
-<!--     #Keep it as an ordered factor -->
-<!--   ) -->
-
-<!-- quantile(sem_aggr$log_abs_sum_slope) -->
-
-
-<!-- sem_aggr$nutrients[sem_aggr$nutrients=="0.01 g/L"]<-0.01 -->
-<!-- sem_aggr$nutrients[sem_aggr$nutrients=="0.35 g/L"]<-0.35 -->
-<!-- sem_aggr$nutrients[sem_aggr$nutrients=="0.75 g/L"]<-0.75 -->
-
-<!-- sem_aggr$temperature[sem_aggr$temperature=="18-21 °C"]=1 -->
-<!-- sem_aggr$temperature[sem_aggr$temperature=="22-25 °C"]=2 -->
-<!-- sem_aggr$temperature[sem_aggr$temperature=="25-28 °C"]=3 -->
-
-
-<!-- #correct balance for magnitude -->
-<!-- # the effect of magnitude goes down, the more divergence there is -->
-
-<!-- # Load the lavaan package -->
-<!-- library(lavaan) -->
-
-
-<!-- model1A <- ' -->
-<!--   stability ~ asyn_Gross+temperature+nutrients+symmetry_scaled+log_sum_abs_slope -->
-
-<!--   asyn_Gross ~ nutrients+richness+log_sum_abs_slope+symmetry_scaled -->
-
-
-<!-- ' -->
-<!-- modl<-lm(data=sem_aggr,log_abs_sum_slope~symmetry_scaled+log_sum_abs_slope) -->
-
-
-<!-- model1B <- ' -->
-<!--   stability ~ asyn_Gross -->
-<!--   +temperature -->
-<!--   +nutrients -->
-<!--   +log_abs_sum_slope+ -->
-<!--   richness -->
-
-
-<!--   asyn_Gross ~ log_abs_sum_slope -->
-<!--   +nutrients -->
-<!--   +richness -->
-<!-- ' -->
-
-
-
-<!-- model1C <- ' -->
-<!--   stability ~ asyn_Gross+temperature+c("c1","c2","c1")*richness+log_abs_sum_slope -->
-
-<!--   asyn_Gross ~ log_abs_sum_slope+c("d1","d2","d3")*richness -->
-
-<!--   c1==0 -->
-<!--   d2==0 -->
-<!-- ' -->
-
-
-
-
-<!-- # Define the SEM model using lavaan syntax -->
-<!--  model2 <- ' -->
-<!--   # Direct effects -->
-<!--   stability ~ asyn_Gross+log_magnitude -->
-
-<!--   # Indirect effect via synchrony -->
-<!--   asyn_Gross ~ symmetry -->
-
-
-
-<!-- ' -->
-
-
-
-<!-- # Fit the model -->
-<!-- fit <- sem(model2, data = sem_aggr%>%dplyr::filter(!is.na(synchrony_Gross),nutrients!="0.01 g/L")) -->
-
-
-<!-- fit1A <- sem(model1A, estimator="MLM",meanstructure = TRUE,data = sem_aggr%>%dplyr::filter(!is.na(synchrony_Gross))) -->
-
-
-<!-- fit1B <- sem(model1B, estimator="MLM",meanstructure = TRUE,data = sem_aggr%>%dplyr::filter(!is.na(synchrony_Gross))) -->
-
-<!-- fit1C <- sem(model1C, estimator="MLM",meanstructure = TRUE,group="nutrients", data = sem_aggr%>%dplyr::filter(,!is.na(synchrony_Gross))) -->
-
-
-
-<!--  ### model B slightly better -->
-<!-- AICc(fit1C,fit1B) ### model B and C almost the same -->
-
-<!-- anova(fit1Ba,fit1Bb) -->
-<!-- # Summarize the results -->
-<!-- summary(fit1B, standardized = TRUE,rsquare=T, fit.measures = TRUE) -->
-
-
-<!-- modificationindices(fit1B) -->
-
-
-<!-- lavaanPlot(model = fit1A, node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"), coefs = TRUE, sig = .05) -->
-
-<!-- ``` -->
-
-<!-- # interactions -->
-
-<!-- ```{r stat averaging} -->
-
-<!-- interactions_df <- read_csv("interactions_df_w_T.csv") -->
-
-<!-- int_aggr<-full_join(interactions_df,async_aggr,join_by(sample_ID)) -->
-<!-- int_aggr$mean_int_strength[is.na(int_aggr$mean_int_strength)]=0 -->
-<!-- int_aggr$mean_interaction[is.na(int_aggr$mean_interaction)]=0 -->
-<!-- int_aggr$sum_int_strength[is.na(int_aggr$sum_int_strength)]=0 -->
-
-<!-- M_int<-lm(data=int_aggr,log10(stability)~log10(abs_sum_slope)+nutrients+temperature+richness+mean_int_strength) -->
-<!-- anova(M_int,lm_full) -->
-
-
-
-<!-- plot_int_syn<-ggplot(data=int_aggr,aes(y=synchrony_Gross,x=mean_int_strength,color=log10(abs_sum_slope)))+ -->
-<!--   geom_point()+ -->
-<!--   geom_smooth(method="lm") -->
-
-
-
-
-
-<!-- ### above rep level -->
-<!-- rep_aggr<-int_aggr%>%group_by(rep_var.y,richness,temperature,nutrients,composition)%>% dplyr::reframe(log_mean_fun_balance=log10(mean(abs_sum_slope)), -->
-<!--                                                                                      mean_asyn_Gross=mean(-synchrony_Gross,na.rm=T), -->
-<!--                                                                                      mean_int_rep_strength=mean(mean_int_strength), -->
-<!--                                                                                      log_mean_stab=log10(mean(1/CV))) -->
-
-
-<!-- M_int<-lm(data=rep_aggr,log_mean_stab~log_mean_fun_balance+nutrients+temperature+richness+mean_int_rep_strength) -->
-<!-- anova(M_int,lm_full) -->
-
-
-<!-- M_int_syn<-lm(data=rep_aggr,mean_asyn_Gross~log_mean_fun_balance+richness+temperature+mean_int_rep_strength+nutrients) -->
-<!-- summary(M_int_syn) -->
-
-<!-- plot_richness_int<-ggplot(data=rep_aggr,aes(x=mean_int_rep_strength))+ -->
-<!--   geom_histogram(bins=10)+ -->
-<!--   facet_wrap(~nutrients) -->
-<!-- plot_int_syn<-ggplot(data=rep_aggr,aes(y=mean_asyn_Gross,x=mean_int_rep_strength))+ -->
-<!--   geom_point()+ -->
-<!--   geom_smooth(method="lm")+ -->
-<!--   facet_wrap(~richness) -->
-
-<!-- ### sem -->
-
-<!-- rep_aggr<-rep_aggr%>%dplyr::mutate(richness=as.numeric(richness)) -->
-
-
-
-
-<!-- model_int <- ' -->
-<!--   log_mean_stab ~ mean_asyn_Gross -->
-<!--   +temperature -->
-<!--   +nutrients -->
-<!--   +log_mean_fun_balance -->
-<!--   +richness -->
-
-
-
-
-<!--   mean_asyn_Gross ~ log_mean_fun_balance -->
-<!--   +nutrients -->
-<!--   +mean_int_rep_strength+ -->
-<!--   +richness -->
-
-
-
-<!-- ' -->
-<!-- fit_int <- sem(model_int, estimator="MLM",meanstructure = TRUE,data = rep_aggr) -->
-
-
-<!-- summary(fit_int, standardized = TRUE, fit.measures = TRUE,rsquare=T) -->
-
-<!-- AICc(fit_int) -->
-
-<!-- lm_r_int_syn<-lm(data=rep_aggr,mean_asyn_Gross~richness+mean_int_rep_strength+log_mean_fun_balance) -->
-
-
-<!-- ##### load interactions from rgular CCM -->
-
-
-<!-- interactions_df <- read_csv("interactions_df_regular.csv") -->
-
-<!-- int_aggr2<-full_join(interactions_df,async_aggr,join_by(sample_ID)) -->
-<!-- int_aggr2$mean_interaction_strength[is.na(int_aggr2$mean_interaction_strength)]=0 -->
-<!-- int_aggr2$mean_sum_interactions[is.na(int_aggr2$mean_sum_interactions)]=0 -->
-
-
-<!-- M_int<-lm(data=int_aggr2,log10(stability)~log10(abs_sum_slope)+nutrients.y+temperature.y+richness+mean_interaction_strength) -->
-<!-- anova(M_int,lm_full) -->
-
-<!-- ``` -->
-
-<!-- ## Plot interaction vs Asnychrony -->
-
-
-<!-- ```{r} -->
-
-<!-- ``` -->
-
-
-
-
-
-<!-- ##Poster -->
-
-<!-- ```{r} -->
-
-<!-- ### time series with nutrients==0.35 and T=22-25 -->
-
-<!-- poster_ts<-complete_ts%>%filter(nutrients=="0.35 g/L", -->
-<!--                                 temperature=="22-25 °C", -->
-<!--                                 sample_ID=="DLPS_Tmp_22_25_Nut0.35_3") -->
-<!-- dark2_palette <- brewer.pal(n = 8, name = "Dark2") -->
-<!-- selected_colors <- dark2_palette[2:5] -->
-
-<!-- plot_poster_ts <- ggplot(data = poster_ts, aes(x = day, y = biomass, color = predict_spec)) + -->
-<!--   geom_line(linewidth=1.5) + ylab("Biomass")+xlab("Day")+ -->
-<!--   theme_classic() + -->
-<!--   scale_color_manual(values = selected_colors) + -->
-<!--   theme(legend.position = "none",        -->
-<!--         axis.text.y = element_blank(),        # Remove the y-axis  -->
-<!--         axis.ticks.y = element_blank(), -->
-<!--         axis.title.x = element_text(size=16), -->
-<!--         axis.title.y=element_text(size=16))      -->
-
-<!-- plot_poster_ts -->
-
-<!-- cake_df<-poster_ts%>%group_by(predict_spec)%>%summarize(mean_biom=mean(biomass)) -->
-
-
-<!-- cake_df <- tibble::tibble( -->
-<!--   predict_spec = c("Dexiostoma", "Loxocephalus", "Paramecium", "Spirostomum"), -->
-<!--   mean_biom = c(0.000000843, 0.000000808, 0.00000520, 0.000000237) -->
-<!-- ) -->
-
-<!-- # percentages -->
-<!-- cake_df <- cake_df %>% -->
-<!--   dplyr::mutate(percentage = mean_biom / sum(mean_biom) * 100) -->
-
-<!-- # cake diagramm -->
-<!-- plot_cake <- ggplot(cake_df, aes(x = "", y = percentage, fill = predict_spec)) + -->
-<!--   scale_fill_manual(values = selected_colors) + -->
-<!--   geom_bar(stat = "identity", width = 1) +  -->
-<!--   coord_polar(theta = "y") +                    # Titel und Legende -->
-<!--   theme_void()+ -->
-<!--   labs(fill="Species")+ -->
-<!--   theme(legend.direction = "vertical",legend.position="right", -->
-<!--         legend.title = element_text(size=16))# Verwende eine Farbpalette -->
-
-
-<!-- plot_cake+plot_poster_ts+ plot_layout(ncol = 2,widths=c(1,2))   # Title for the combined plot -->
-<!-- weight_plot <- wrap_elements(plot_cake + theme(plot.margin = margin( b = 150))) +  # Move the cake plot up -->
-<!--   plot_spacer() + -->
-<!--   plot_poster_ts +  -->
-<!--   plot_layout(ncol = 3, widths = c(1, 0.2, 1)) -->
-
-<!-- weight_plot -->
-
-<!-- #ggsave("weight.pdf", plot = weight_plot, width = 10, height = 6) -->
-
-
-<!-- # create temperature regime plot -->
-
-<!-- regime1<-data.frame(temperature=rep(c(18,18,18,21,21,21),length.out=60),regime= "18-21 °C") -->
-<!-- regime2<-data.frame(temperature=rep(c(22,22,22,25,25,25),length.out=60),regime= "22-25 °C") -->
-<!-- regime3<-data.frame(temperature=rep(c(25,25,25,28,28,28),length.out=60),regime= "25-28 °C") -->
-<!-- day= -->
-
-<!-- df_Temp<-rbind(regime1,regime2,regime3) -->
-<!-- df_Temp<-cbind(df_Temp,day=rep(1:60)) -->
-
-<!-- plot_temp<-ggplot(data=df_Temp,aes(x=day,y=temperature,linetype=regime))+ -->
-<!--   geom_line()+  theme_classic() + -->
-<!--   ylab("Temperature °C")+xlab("Day")+ -->
-<!--   labs(linetype="Temperature regime")+ -->
-<!--   scale_y_continuous(breaks = c(28, 25, 22, 21, 18)) + -->
-<!--   theme(legend.direction = "vertical",legend.position="right",         -->
-<!--         axis.title.x = element_text(size=16), -->
-<!--         axis.title.y=element_text(size=16)) -->
-
-
-<!-- ggsave("temp_regime.pdf", plot = plot_temp, width = 8, height = 6) -->
-
-
-<!-- ############ Main results plot -->
-
-
-<!-- balance_dd<-complete_aggr%>%dplyr::select(abs_sum_slope,richness,CV)%>% -->
-<!--   cbind(type="no")%>%dplyr::mutate(abs_sum_slope=abs_sum_slope/as.numeric(richness)) -->
-<!-- names(balance_dd)[names(balance_dd)=="abs_sum_slope"]<-"balance" -->
-
-<!-- weighted_balance_dd<-complete_aggr%>%dplyr::select(avg_w_sumslopes,richness,CV)%>% -->
-<!--   cbind(type="yes") -->
-<!-- names(weighted_balance_dd)[names(weighted_balance_dd)=="avg_w_sumslopes"]<-"balance" -->
-
-<!-- main_r_dd<-rbind(balance_dd,weighted_balance_dd) -->
-
-<!-- plot_main <- main_r_dd %>% -->
-<!--   ggplot(aes(x = log10(balance), y = log10(1/CV), color = type)) + -->
-<!--   geom_point(aes(x = log10(balance), y = log10(1/CV))) + -->
-<!--   geom_smooth(method = "lm", aes(x = log10(balance), y = log10(1/CV))) + -->
-<!--   theme_classic() + -->
-<!--   scale_color_viridis_d(option = "inferno", begin = 0.3, end = 0.6) + -->
-<!--   scale_x_continuous( -->
-<!--     breaks = log10(c(0.0025,0.01, 0.04, 0.16, 0.64)), -->
-<!--     labels = c("0.0025","0.01", "0.04", "0.16", "0.64") -->
-<!--   ) + -->
-<!--   ylab(expression("temporal stability: "~log[10]("mean/s.d.")))+ -->
-<!--   xlab(expression(log[10]("Balance"))) + -->
-<!--   theme(axis.title.x = element_text(size = 16), -->
-<!--         axis.title.y = element_text(size = 16), -->
-<!--         strip.background = element_rect(fill = "grey80", color = NA),   -->
-<!--     strip.text = element_text(size = 12)) + -->
-<!--   labs(color = "Weighted") +   -->
-<!--   facet_wrap(~richness, labeller = as_labeller(function(x) paste0("richness = ", x))) -->
-
-<!-- ggsave("main_plot.pdf", plot = plot_main, width = 10, height = 6) -->
-
-
-
-<!-- ### linear model summary table -->
-
-<!-- # Install and load the broom package if you haven't already -->
-
-<!-- library(broom) -->
-
-<!-- # Fit the model -->
-<!-- lm_full<-lm(data=complete_aggr, log10(stability)~log10(abs_sum_slope)+richness+temperature+nutrients) -->
-
-<!-- # Tidy up the summary -->
-<!-- tidy_model <- tidy(lm_full_w) -->
-
-<!-- # View the tidied model -->
-<!-- tidy_model -->
-
-
-<!-- library(broom) -->
-<!-- library(writexl) -->
-
-
-
-<!-- # Step 3: Tidy the model output using broom -->
-<!-- model_summary <- tidy(lm_full) -->
-
-<!-- # Step 4: Add significance stars for p-values -->
-<!-- model_summary <- model_summary %>% -->
-<!--   dplyr::mutate(Significance = case_when( -->
-<!--     p.value < 0.001 ~ "***", -->
-<!--     p.value < 0.01 ~ "**", -->
-<!--     p.value < 0.05 ~ "*", -->
-<!--     p.value < 0.1 ~ ".", -->
-<!--     TRUE ~ "" -->
-<!--   )) -->
-
-<!-- # Step 5: Rename columns for a nicer presentation -->
-<!-- names(model_summary) <- c("Term", "Estimate", "Std. Error", "t value", "p value", "Significance") -->
-
-<!-- # Step 6: Write the summary to an Excel file -->
-<!-- write_xlsx(model_summary, "full_model_summary.xlsx") -->
-
-
-<!-- # Step 3: Tidy the model output using broom -->
-<!-- model_summary <- tidy(lm_full_w) -->
-
-<!-- # Step 4: Add significance stars for p-values -->
-<!-- model_summary <- model_summary %>% -->
-<!--   dplyr::mutate(Significance = case_when( -->
-<!--     p.value < 0.001 ~ "***", -->
-<!--     p.value < 0.01 ~ "**", -->
-<!--     p.value < 0.05 ~ "*", -->
-<!--     p.value < 0.1 ~ ".", -->
-<!--     TRUE ~ "" -->
-<!--   )) -->
-
-<!-- # Step 5: Rename columns for a nicer presentation -->
-<!-- names(model_summary) <- c("Term", "Estimate", "Std. Error", "t value", "p value", "Significance") -->
-
-<!-- # Step 6: Write the summary to an Excel file -->
-<!-- write_xlsx(model_summary, "full_model_w_summary.xlsx") -->
-
-
-
-<!-- ``` -->
+<div class="figure" style="text-align: center">
+<img src="Results_RD_mod_files/figure-html/interactions-1.png" alt="Relatioship between asynchrony and fundamental balance divided by nutrient level."  />
+<p class="caption">(\#fig:interactions)Relatioship between asynchrony and fundamental balance divided by nutrient level.</p>
+</div>
 

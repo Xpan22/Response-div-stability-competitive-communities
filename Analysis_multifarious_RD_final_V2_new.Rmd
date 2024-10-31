@@ -733,7 +733,7 @@ df_slopes<-df_slopes%>%mutate(nutrients=paste0(nutrients," g/L"),
 ## Calculate diveregence for all possible compositions
 
 
-```{r communities, fig.cap='Community compositions that were used in the experiment to create, for each richness level, a gradient of response diversity. Letter represent different species: C = Colpidium, S = Spirostomum, D = Dexiostoma, P = Paramecium, L = Loxocephalus', fig.align="center", fig.height=16, fig.width=25}
+```{r communities_all, fig.cap='Community compositions that were used in the experiment to create, for each richness level, a gradient of response diversity. Letter represent different species: C = Colpidium, S = Spirostomum, D = Dexiostoma, P = Paramecium, L = Loxocephalus', fig.align="center", fig.height=16, fig.width=25}
 
 characters <- c("C", "D", "L", "S", "P")
 

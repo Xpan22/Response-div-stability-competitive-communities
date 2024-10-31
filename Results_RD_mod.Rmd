@@ -10,6 +10,7 @@ output:
       smooth_scroll: true
     code_folding: hide
     keep_md: yes
+    fig_caption: true  
 editor_options: 
   markdown: 
     wrap: 72
@@ -54,7 +55,8 @@ knitr::opts_chunk$set(echo = FALSE,
 
 # Introduction
 
-The purpose of this document is to provide a reproducible record of all analyses and figures in the main article. The main article is focused on the effect of response diversity on community stability in fluctuating environments. We are going to look at the effect of response diversity, richness, temperature and nutrients on community temporal stability. Specifically, we are going to look at the effect of fundamental and realized imbalance (our measurements of stability) on temporal stability. Finally, as response diversity is thought to stabilize temporal stability of aggregate community properties via asynchrony, we are going to look at the relationship between response diversity and asynchrony. 
+The purpose of this document is to provide a reproducible record of all analyses and figures in the main article. The main article is focused on the effect of response diversity on community stability in fluctuating environments. We are going to look at the effect of response diversity, richness, temperature and nutrients on community temporal stability. Specifically, we are going to look at the effect of fundamental balance (our measurement of stability) on temporal stability. Then, as response diversity is thought to stabilize temporal stability of aggregate community properties via asynchrony, we are going to look at the relationship between response diversity and asynchrony. 
+Finally, as multiple evidence suggests that compensatory dynamics and temporal stability are determine by species interactions, we are going to analyse the effect of species interactions on stability to understand if they are more important than response diversity in driving temporal stability of community biomass.
 
 This document is produced by an Rmarkdown file that includes code to reproduce from data all results presented in the main article.
 
@@ -74,12 +76,8 @@ load("Data/ciliate_traits.Rdata")
 
 df_slopes <- read_csv("Data/df_slopes_cor.csv")
 ```
+## Data wrangling and balance calculation
 
-# Biomass
-
-Let's have a look at the biomass dynamics in the different environmental treatments.
-
-Is realised imbalance calculated in this chuck?
 
 ```{r echo=F, warning=FALSE, results='hide'}
 # needs to have id_new variable
@@ -206,9 +204,14 @@ biomass_ts<-aggr_ts%>%group_by(day,temperature,nutrients,richness)%>%summarize(t
 
 ```
 
+
+# Biomass
+
+Let's have a look at the biomass dynamics in the different environmental treatments.
+
 ### tot biomass plot
 
-```{r plot_biomass, fig.cap='Community total biomass during the experiment in different environmental treatments. Different color represent richness levels.', fig.align="center", fig.height=8, fig.width=15}
+```{r plot_biomass, fig.align="center", fig.height=8, fig.width=15}
 
 plot_biomass<-ggplot(data=biomass_ts)+
   geom_ribbon(aes(x=day,y=tot_biom,fill=richness,color=richness,ymin=tot_biom-se_tot_biom,ymax=tot_biom+se_tot_biom),show.legend=F,alpha=0.5)+
@@ -226,51 +229,13 @@ plot_biomass<-ggplot(data=biomass_ts)+
   
 plot_biomass
 ```
-
-
-First we analyze the effect of diversity, time, nutrients, temperature, and of the interaction between nutrients and temperature on biomass using a mixed model with composition and microcosm ID as random effects. Nutrients was centered on the mean to remove collinearity with temperature. Total community biomass was log transformed. Composition and microcosm ID were added as random effects to account for differential biomass production across communities and to account for the repeated nature of the measurements.
-
-```{r echo=TRUE}
-# Fit the linear mixed model
-lmm <- lmer(
-  log10(tot_biomass + 0.1) ~ as.numeric(day)  + (temperature) * scale(as.numeric(nutrients)) + as.numeric(richness) +
-    (1 | sample_ID) + (1 | composition),
-  data = df_biomass_mod
-)
-```
-
-Check model's assumptions
-```{r model_check0, fig.cap='model check 1.', fig.align="center", fig.height=9, fig.width=12}
-check_model(lmm)
-```
-
-
-```{r fig.width= 10}
-summary(lmm)
-
-```
-
-
-```{r fig.width= 10}
-anova(lmm)
-```
-
-
-
-
-**Time** and **nutrients** independently impact biomass, with biomass decreasing slightly over time and increasing with nutrient levels.
-
-**Temperature** alone also significantly impact biomass, with biomass decreasing as temperature increases.
-
-**temperature-nutrient interactions** are significant, suggesting the positive impact of nutrients on biomass is less pronounced at higher temperatures.
-
-**Richness** does not appear to have a statistically significant effect on total biomass. 
+ ** Figure 1**: Community total biomass during the experiment in different environmental treatments. Different color represent richness levels.
 
 
 
 # Main Results 
 
-We now look at the main results of the experiment. We are going to look first at the effect of richness, temperature and nutrients on community temporal stability. Then, we are going to look at the effect of fundamental and realised imbalance on temporal stability. Finally, we are going to look at the relationship between response diversity and temporal stability.
+We now look at the main results of the experiment. We are going to look first at the effect of richness, temperature and nutrients on community temporal stability. Then, we are going to look at the reltionship between divergence (original response diversity metric) and temporal stability. Finally, we are going to look at the relationship between response diversity and temporal stability.
 
 In the whole analysis, we calculated the temporal stability of total community biomass as the inverse of the coefficient of variation (ICV) (i.e. $\frac{\sigma}{\mu}$). 
 ```{r results='hide', echo=FALSE, warning=FALSE}
@@ -295,14 +260,14 @@ complete_aggr<-full_join(divergence_df,complete_aggr,by=join_by(composition,nutr
 ```
 
 ### Effect of T, N and R
-```{r boxplots_TNR, results='hide', echo=FALSE, warning=FALSE,fig.cap='Effects of richness (a), temperature (b), and nutrients (c) on community total biomass temporal stability.', fig.align="center", fig.height=8, fig.width=15}
+```{r boxplots_TNR, results='hide', echo=FALSE, warning=FALSE, fig.align="center", fig.height=8, fig.width=15}
 #### effects of temperature; nutrient and richness, now with complete time series
 
 plot_T_complete<-ggplot(data=complete_aggr)+
   geom_boxplot(aes(y=log10(1/CV),x=temperature))+
   geom_jitter(aes(y=log10(1/CV),x=temperature))
 
-plot_T_complete<-ggplot(data=complete_aggr)+theme_bw()+
+plot_T_complete<-ggplot(data=complete_aggr)+theme_bw(base_size = 25)+
   geom_quasirandom(data= complete_aggr,aes(y=log10(1/CV), x=temperature, group=temperature, colour=as.factor(temperature)),
                                   dodge.width=2, size=2.5) + 
 
@@ -320,7 +285,7 @@ plot_N_complete<-ggplot(data=complete_aggr)+
   geom_boxplot(aes(y=log10(1/CV),x=nutrients))+
   geom_jitter(aes(y=log10(1/CV),x=nutrients,color=richness))
 
-plot_N_complete<-ggplot(data=complete_aggr)+ theme_bw()+
+plot_N_complete<-ggplot(data=complete_aggr)+ theme_bw(base_size = 25)+
   geom_quasirandom(data= complete_aggr,aes(y=log10(1/CV), x=nutrients, group=nutrients, colour=as.factor(nutrients)),
                                   dodge.width=2, size=2.5) + 
 
@@ -336,7 +301,7 @@ plot_R_complete<-ggplot(data=complete_aggr)+
   geom_boxplot(aes(y=log10(1/CV),x=richness))+
   geom_jitter(aes(y=log10(1/CV),x=richness))
 
-plot_R_complete<-ggplot(data=complete_aggr)+theme_bw()+
+plot_R_complete<-ggplot(data=complete_aggr)+theme_bw(base_size = 25)+
   geom_quasirandom(data= complete_aggr,aes(y=log10(1/CV), x=richness, group=richness, colour=as.factor(richness)),
                                   dodge.width=2, size=4) + 
 
@@ -358,7 +323,7 @@ plot_N_complete)
 wrap_elements(combined_plot) +
   labs(tag = "Temporal stability\nlog(mean/s.d.)")+
   theme(
-    plot.tag = element_text(size = rel(1), angle = 90),
+    plot.tag = element_text(size = rel(2.5), angle = 90),
     plot.tag.position = "left"
   )
 
@@ -367,64 +332,17 @@ wrap_elements(combined_plot) +
 
 
 ```
+**Figure 2**: Effects of richness (a), temperature (b), and nutrients (c) on community total biomass temporal stability.
+
 
 
 We can see that richness does not have a clear effect on community temporal stability, while stability was higher at lower temperature, and nutrients increased community temporal stability.
 
-### Effect RD
+### Effect of Divergence
 
-We are now going to look at how response diversity (imbalance) affected temporal stability of total community biomass. We are going to look at the relationship between fundamental imbalance (so based only on species response surfaces measured in monoculture), an realised imbalance (measured accounting for species contribution to imbalance).
+We look at the relationship between divergence (our original response diversity metric) and stability
 
-This is fundamentally testing our most important hypothesis.
-
-```{r effect_RD, results='hide', echo=FALSE, warning=FALSE,fig.cap='Effects of fundamental and realised response diversity (measured as imbalance) on total community biomass temporal stability.', fig.align="center", fig.height=10, fig.width=16}
-
-balance_dd<-complete_aggr%>%dplyr::select(abs_sum_slope,richness,CV)%>%
-  cbind(type="fundamental")%>%mutate(abs_sum_slope=abs_sum_slope/as.numeric(richness))
-names(balance_dd)[names(balance_dd)=="abs_sum_slope"]<-"balance"
-
-weighted_balance_dd<-complete_aggr%>%dplyr::select(avg_w_sumslopes,richness,CV)%>%
-  cbind(type="realised")
-names(weighted_balance_dd)[names(weighted_balance_dd)=="avg_w_sumslopes"]<-"balance"
-
-main_r_dd<-rbind(balance_dd,weighted_balance_dd)
-
-plot_main <- main_r_dd %>%
-  ggplot(aes(x = log10(balance), y = log10(1/CV), color = type)) +
-  geom_point(aes(x = log10(balance), y = log10(1/CV))) +
-  geom_smooth(method = "lm", aes(x = log10(balance), y = log10(1/CV)),show.legend=F) +
-  theme_classic() +
-  scale_color_viridis_d(option = "inferno", begin = 0.3, end = 0.6) +
-  scale_x_continuous(
-    breaks = log10(c(0.0025,0.01, 0.04, 0.16, 0.64)),
-    labels = c("0.0025","0.01", "0.04", "0.16", "0.64")
-  ) +
-  scale_y_continuous(
-    breaks = log10(c(0.1,0.2, 0.4, 0.8, 1.6, 3.2)),
-    labels = c("0.1","0.2"," 0.4", "0.8", "1.6", "3.2")
-  ) +
-  ylab("Temporal stability\nlog(mean/s.d.)")+
-  xlab("log(imbalance)") +
- theme(
-    axis.title.x = element_text(size = 25),
-    axis.title.y = element_text(size = 25),
-    axis.text = element_text(size = 14),                      # Axis text size             # Facet label text size
-    legend.title = element_text(size = 20),                   # Legend title size
-    legend.text = element_text(size = 20),                     # Legend text size
-        strip.background = element_rect(fill = "grey80", color = NA),  
-    strip.text = element_text(size = 22)) +
-  labs(color = "Imbalance") +  
-  facet_wrap(~richness, labeller = as_labeller(function(x) paste0("richness = ", x)))
-
-plot_main
-```
-
-We can see that imbalance is always negatively related to temporal stability, which means that response diversity promotes stability across richness levels. Interestingly, we see that there is little difference between fundamental and realised imbalance. Yet, as the richness increases, the relationship between realised imbalance and stability becomes steeper compared to fundamental imbalance. 
-
-
-We look also at the relationship between divergence (our original response diversity metric)
-
-```{r divergence_CV, results='hide', echo=FALSE, warning=FALSE, fig.cap='Relationship between Divergence and temporal stability of total community biomass.', fig.align="center", fig.height=10, fig.width=16}
+```{r divergence_CV, results='hide', echo=FALSE, warning=FALSE, fig.align="center", fig.height=10, fig.width=16}
 
 plot_CV_divergence<-complete_aggr%>%ggplot(aes(x=divergence,y=log10(1/CV),color=richness))+
   geom_point()+
@@ -450,24 +368,26 @@ plot_CV_divergence<-complete_aggr%>%ggplot(aes(x=divergence,y=log10(1/CV),color=
 plot_CV_divergence
 
 ```
-We can see that the positive relationship between temporal stability and response diversity measured as divergence holds, but it becomes shallower as richness increases. We could speculated that this due to divergence considering only the responses of the 2 most "responding" species. Thus, when species richness increases, disregarding the responses of the other species in the community except the 2 responding the most makes the relationship between response diversity and stability weaker. 
+**Figure 3**: Relationship between Divergence and temporal stability of total community biomass.
 
 
-# Linear models
 
+Divergence is positively related to temporal stability, suggesting that response diversity promotes stability. However, the relationship between divergence and stability becomes weaker as richness increases. This is why, after running the experiment, we developed another metric to measure response diversity, which we called balance, and that is presented in the main text of the publication. 
+Balance has several desirable features that makes it a more suitable metric than divergence: Independence of richness, higher predictive power, and accounts for the responses of all species in the community (as opposed to divergence that accounts for only the 2 most "responding" species).
 
-## Model: Fundamental Imbalance
+Here, we provide extensive evidence of why balance is a better metric to measure response diversity than divergence, and thus justifying focusing the analysis around balance.
 
-First we analyze the effect of fundamental imbalance, temperature, nutrients and richness on biomass temporal stability using a linear model. 
-imbalance and richness were modelled as continuous variables, while temperature and nutrients were modelled as categorical variables. Imbalance was log-transformed to meet the assumptions of linear models.
+# Comparing Divergence and Balance
+
+We first compare how well divergence and balance predict stability (predictive power). 
 
 ```{r results='hide', echo=FALSE, warning=FALSE, message=FALSE}
 library(broom)
 library(kableExtra)
 
 complete_aggr <- complete_aggr %>% mutate(stability = 1/CV) %>% 
-  dplyr::rename(imbalance_f = abs_sum_slope,
-                imbalance_r = avg_w_sumslopes)
+  dplyr::rename(balance_f = abs_sum_slope,
+                balance_r = avg_w_sumslopes)
 
 
 
@@ -475,9 +395,282 @@ complete_aggr <- complete_aggr %>% mutate(stability = 1/CV) %>%
 # anova(lm_full)
 ```
 
+## Balance
+
+
+Model assumptions
+```{r model_check1, fig.align="center", fig.height=9, fig.width=12, include=TRUE, echo=TRUE}
+# 
+
+mod1 <- lm(data=complete_aggr,log10(stability)~log10(balance_f))
+check_model(mod1)
+
+```
+```{r include = TRUE, echo=TRUE}
+performance(mod1)
+```
+
+
+## Divergence
+```{r model_check2, fig.align="center", fig.height=9, fig.width=12}
+mod2 <- lm(data=complete_aggr,log10(stability)~(divergence))
+check_model(mod2)
+
+```
+
+```{r include = TRUE, echo=TRUE}
+performance(mod2)
+
+```
+
+
+Balance explains more of the variance in stability than divergence.
+
+
+Moreover, from **Figure 3**, it looks like divergence declines in performance as richness increases. Let's test this analytically.
+To do than we build a linear model having stability as response variable and either log10(balance) or divergence as predictor for each richness level. We then extract the R squared of the models and their *standardised* estimates. (standardised estimates were calculated centering divergence and balance using the function scale()).
+
+```{r include = TRUE, echo=TRUE}
+# getting model estimates for each richness level
+lm_divergence_richness_E <- complete_aggr %>%
+  nest(data = -richness) %>%
+  mutate(
+    model = map(data, ~ lm(log10(stability) ~ scale(divergence), data = .x)),
+    results = map(model, broom::tidy)
+  ) %>%
+  unnest(results) %>% dplyr::filter(term=="scale(divergence)") 
+
+
+# getting model R squared for each richness level
+
+lm_divergence_richness_R <- complete_aggr %>%
+  nest(data = -richness) %>%
+  mutate(
+    model = map(data, ~ lm(log10(stability) ~ scale(divergence), data = .x)),
+    results = map(model, broom::glance)
+  ) %>%
+  unnest(results) 
+
+lm_divergence_richness_R
+```
+
+
+```{r include = TRUE, echo=TRUE}
+
+# getting model estimatesf or each richness level
+lm_balance_richness_E <- complete_aggr %>%
+  nest(data = -richness) %>%
+  mutate(
+    model = map(data, ~ lm(log10(stability) ~ scale(log10(balance_f)), data = .x)),
+    results = map(model, broom::tidy)
+  ) %>%
+  unnest(results) %>% dplyr::filter(term=="scale(log10(balance_f))") 
+
+
+
+# getting model R squared for each richness level
+lm_balance_richness_R <- complete_aggr %>%
+  nest(data = -richness) %>%
+  mutate(
+    model = map(data, ~ lm(log10(stability) ~ scale(log10(balance_f)), data = .x)),
+    results = map(model, broom::glance)
+  ) %>%
+  unnest(results) 
+
+lm_balance_richness_R
+```
+
+
+```{r R_squared, fig.align="center", fig.height=9, fig.width=12}
+# plot how the r squared changes with richness for divergence and balance with legend and lines
+a <- ggplot(data = lm_divergence_richness_R, aes(x = richness, y = r.squared, color = "Divergence")) +
+  geom_point() +
+  geom_line(aes(group = 1)) +
+  geom_point(data = lm_balance_richness_R, aes(x = richness, y = r.squared, color = "Balance")) +
+  geom_line(data = lm_balance_richness_R, aes(x = richness, y = r.squared, color = "Balance", group = 1)) +
+  labs(x = "Richness", y = "R squared", color = "Model") +
+  theme_minimal() +
+  scale_color_manual(values = c("Divergence" = "blue", "Balance" = "red"))+ labs(tag = "(a)")
+
+
+# plot how the estinmates changes with richness for divergence and balance with legend and lines
+b <- ggplot(data = lm_divergence_richness_E, aes(x = richness, y = estimate, color = "Divergence")) +
+  geom_point() +
+  geom_line(aes(group = 1)) +
+  geom_point(data = lm_balance_richness_E, aes(x = richness, y = abs(estimate), color = "Balance")) +
+  geom_line(data = lm_balance_richness_E, aes(x = richness, y = abs(estimate), color = "Balance", group = 1)) +
+  labs(x = "Richness", y = "Estimate", color = "Model") +
+  theme_minimal() +
+  scale_color_manual(values = c("Divergence" = "blue", "Balance" = "red")) + labs(tag = "(b)")
+
+a + b
+
+
+```
+**Figure 4**: Performance comparison of divergence vs balance. In (a), the R squared of linear models for divergence and balance are shown for each richness level. In (b), the estimates of the linear models for divergence and balance are shonw for each richness level.
+
+
+
+We can see that the R squared of divergence as predictor of stability becomes smaller as richness increases, while the R squared of balance as predictor of stability does not (actually increases slightly). 
+
+
+Now we build a linear model were stability is modeled as a function of balance and divergence. 
+Then, we compared the variance explained by the full model compared to a model containing either only balance or only divergence.
+
+```{r model_check3, fig.align="center", fig.height=9, fig.width=12, include=TRUE, echo=TRUE}
+lm_div_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f)+divergence)
+check_model(lm_div_balance)
+```
+
+```{r include = TRUE, echo=TRUE}
+performance(lm_div_balance)
+```
+model with only divergence
+```{r model_check4, fig.align="center", fig.height=9, fig.width=12, include=TRUE, echo=TRUE}
+lm_div <- lm(data=complete_aggr,log10(stability)~divergence)
+check_model(lm_div)
+```
+
+
+```{r include = TRUE, echo=TRUE}
+performance(lm_div)
+```
+
+model with only balance
+```{r model_check5, fig.align="center", fig.height=9, fig.width=12, include=TRUE, echo=TRUE}
+lm_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f))
+check_model(lm_balance)
+```
+
+```{r include = TRUE}
+performance(lm_balance)
+```
+
+
+```{r include = TRUE, echo=TRUE}
+anova(lm_div_balance,  lm_balance)
+```
+
+
+```{r include = TRUE, echo=TRUE}
+anova(lm_div_balance,  lm_div)
+```
+
+Balance explains more of the variance in stability than divergence, and there is virtually no difference between a model containing only balance and the full model.
+Richness had to transformed to numeric and to be centered to avoid collinearity with divergence
+
+```{r model_check6, fig.align="center", fig.height=9, fig.width=12, include=TRUE, echo=TRUE}
+
+
+lm_rich_div <- lm(data=complete_aggr,log10(stability)~divergence*scale(as.numeric(richness)))
+check_model(lm_rich_div)
+```
+
+```{r include = TRUE, echo=TRUE}
+anova(lm_rich_div)
+```
+
+
+Divergence significantly interact with richness, suggesting that the relationship between divergence and stability changes with richness. 
+While an ideal metric of response diversity should be independent of richness.
+
+
+We repeat the same model using balance instead of divergence.
+```{r model_check7, fig.align="center", fig.height=9, fig.width=12, include=TRUE, echo=TRUE}
+lm_rich_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f)*scale(as.numeric(richness)))
+check_model(lm_rich_balance)
+```
+
+```{r include = TRUE, echo=TRUE}
+anova(lm_rich_balance)
+
+```
+
+Balance does not significantly interact with richness, suggesting that the relationship between balance and stability is stable across richness levels.
+
+Finally, we assess variable importance using the relative importance of predictors in the full model.
+We use the package vip (https://cran.r-project.org/web/packages/vip/vignettes/vip.html) to calculate the relative importance of predictors in the full model.
+The function vip::vip for multiple linear regression, or linear models (LMs), uses the absolute value of the -statistic  as a measure of VI.
+Motivation for the use of the associated 𝑡-statistic is given in Bring (1994) [https://www.tandfonline.com/doi/abs/10.1080/00031305.1994.10476059].
+
+```{r vip1, fig.align="center", fig.height=6, fig.width=8, include=TRUE, echo=TRUE}
+vip::vip(lm_div_balance)
+```
+**Figure 5**: Variable importance in the model including both balance and divergence as predictors of stability.
+
+
+We believe that the extensive evidence here provided justifies focusing the analysis around balance, and not divergence, as a metric of response diversity.
+We will thus only look at balance for the rest of the analysis. 
+
+
+
+# Effect RD
+
+We are now going to look at how response diversity (balance) affected temporal stability of total community biomass. We are going to look at the relationship between fundamental balance (so based only on species response surfaces measured in monoculture), an realised balance (measured accounting for species contribution to balance).
+
+This is fundamentally testing our most important hypothesis.
+
+```{r effect_RD, results='hide', echo=FALSE, warning=FALSE,fig.cap='Effects of fundamental and realised response diversity (measured as balance) on total community biomass temporal stability.', fig.align="center", fig.height=10, fig.width=16}
+
+balance_dd<-complete_aggr%>%dplyr::select(balance_f,richness,CV)%>%
+  cbind(type="fundamental")%>%mutate(balance_f=balance_f/as.numeric(richness))
+names(balance_dd)[names(balance_dd)=="balance_f"]<-"balance"
+
+weighted_balance_dd<-complete_aggr%>%dplyr::select(balance_r,richness,CV)%>%
+  cbind(type="realised")
+names(weighted_balance_dd)[names(weighted_balance_dd)=="balance_r"]<-"balance"
+
+main_r_dd<-rbind(balance_dd,weighted_balance_dd)
+
+plot_main <- main_r_dd %>%
+  ggplot(aes(x = log10(balance), y = log10(1/CV), color = type)) +
+  geom_point(aes(x = log10(balance), y = log10(1/CV))) +
+  geom_smooth(method = "lm", aes(x = log10(balance), y = log10(1/CV)),show.legend=F) +
+  theme_classic() +
+  scale_color_viridis_d(option = "inferno", begin = 0.3, end = 0.6) +
+  scale_x_continuous(
+    breaks = log10(c(0.0025,0.01, 0.04, 0.16, 0.64)),
+    labels = c("0.0025","0.01", "0.04", "0.16", "0.64")
+  ) +
+  scale_y_continuous(
+    breaks = log10(c(0.1,0.2, 0.4, 0.8, 1.6, 3.2)),
+    labels = c("0.1","0.2"," 0.4", "0.8", "1.6", "3.2")
+  ) +
+  ylab("Temporal stability\nlog(mean/s.d.)")+
+  xlab("log(balance)") +
+ theme(
+    axis.title.x = element_text(size = 25),
+    axis.title.y = element_text(size = 25),
+    axis.text = element_text(size = 14),                      # Axis text size             # Facet label text size
+    legend.title = element_text(size = 20),                   # Legend title size
+    legend.text = element_text(size = 20),                     # Legend text size
+        strip.background = element_rect(fill = "grey80", color = NA),  
+    strip.text = element_text(size = 22)) +
+  labs(color = "balance") +  
+  facet_wrap(~richness, labeller = as_labeller(function(x) paste0("richness = ", x)))
+
+plot_main
+```
+
+We can see that balance is always negatively related to temporal stability, which means that response diversity promotes stability across richness levels. Interestingly, we see that there is little difference between fundamental and realised balance. Yet, as the richness increases, the relationship between realised balance and stability becomes steeper compared to fundamental balance. 
+
+
+We can see that the positive relationship between temporal stability and response diversity measured as divergence holds, but it becomes shallower as richness increases. We could speculated that this due to divergence considering only the responses of the 2 most "responding" species. Thus, when species richness increases, disregarding the responses of the other species in the community except the 2 responding the most makes the relationship between response diversity and stability weaker. 
+
+
+# Linear models
+
+
+## Model: Fundamental balance
+
+First we analyze the effect of fundamental balance, temperature, nutrients and richness on biomass temporal stability using a linear model. 
+balance and richness were modelled as continuous variables, while temperature and nutrients were modelled as categorical variables. balance was log-transformed to meet the assumptions of linear models.
+
+
+
 
 ```{r echo=TRUE}
-lm_full<-lm(data=complete_aggr,log10(stability)~log10(imbalance_f)+as.numeric(richness)+nutrients+temperature)
+lm_full<-lm(data=complete_aggr,log10(stability)~log10(balance_f)+as.numeric(richness)+nutrients+temperature)
 
 ```
 
@@ -501,11 +694,11 @@ anova(lm_full)
 
 ```
 
-A linear model was fitted to examine the effects of resource imbalance, richness, nutrients, and temperature on community stability (measured as log₁₀(stability)). The model explained a significant portion of the variance (Adjusted R² = 0.5115, F(7, 235) = 37.2, p < 2.2e-16).
+A linear model was fitted to examine the effects of resource balance, richness, nutrients, and temperature on community stability (measured as log₁₀(stability)). The model explained a significant portion of the variance (Adjusted R² = 0.5115, F(7, 235) = 37.2, p < 2.2e-16).
 
 The intercept of the model was estimated at -0.349 (SE = 0.028, p < 2e-16), indicating the baseline log₁₀(stability) when all predictor variables are at their reference levels.
 
-Among the predictors, log₁₀(imbalance) showed a significant negative effect on stability (Estimate = -0.054, SE = 0.016, p = 0.0009). This suggests that as imbalance increases (more balance), stability tends to decrease.
+Among the predictors, log₁₀(balance) showed a significant negative effect on stability (Estimate = -0.054, SE = 0.016, p = 0.0009). This suggests that as balance increases (more balance), stability tends to decrease.
 
 
 Nutrient concentration also had a significant positive effect on stability, with estimates for 0.35 g/L (Estimate = 0.180, SE = 0.019, p < 2e-16) and 0.75 g/L (Estimate = 0.212, SE = 0.019, p < 2e-16) indicating increased stability with higher nutrient levels.
@@ -514,7 +707,7 @@ Finally, temperature regimes showed a significant effect on stability. Both 22�
 
 Richness did not show a significant effect on stability (Estimate = 0.002, SE = 0.019, p = 0.91), which suggests that it is not richness *per se* that affects stability in this system. Similar results have been previously reported in the literature, e.g. (Petchey et al. 2002)[https://nsojournals.onlinelibrary.wiley.com/doi/full/10.1034/j.1600-0706.2002.990203.x?casa_token=THaSxpjziQcAAAAA%3Ay_0gJhnL_rcPsrolHEmZvI0VF14a43WRDTy_UB_kDPQOxq2EA98NQT65Co63J58NCeW-SiTIjoDkgelQ] and (Gonzalez and Descamps-Julien 2004) [https://nsojournals.onlinelibrary.wiley.com/doi/full/10.1111/j.0030-1299.2004.12925.x?casa_token=4OtlkUcK3YgAAAAA%3ASFjll62wMQW8CBV9qDe5lbGGDXVcRiWna6slN1GaVvTMSRJKDAnpSd_jEBsFKKRsL7muxbJ0Tv3T] who found that species richness did not significantly impact temporal stability in fluctuating environment.
 
-In summary, our findings show that temporal stability is significantly influenced by response diversity (imbalance), nutrient concentration, and temperature, with higher nutrient concentrations enhancing stability and higher temperatures reducing it. However, species richness was not a significant determinant of stability within the conditions of this study.
+In summary, our findings show that temporal stability is significantly influenced by response diversity (balance), nutrient concentration, and temperature, with higher nutrient concentrations enhancing stability and higher temperatures reducing it. However, species richness was not a significant determinant of stability within the conditions of this study.
 
 Prepare publication-ready table 
 
@@ -540,138 +733,27 @@ table1 <- model_summary %>%
 ```
 
 ```{r}
-table1
-```
-
-## Model: Relised Imbalance
-Then we analyze the effect of realised imbalance, temperature, nutrients and richness on biomass temporal stability using a linear model. 
-
-
-```{r echo=TRUE}
-lm_full_w<-lm(data=complete_aggr,log10(stability)~log10(imbalance_r)+as.numeric(richness)+nutrients+temperature)
-
-```
-
-check model's assumptions
-```{r model_check2, fig.cap="model check 2.", fig.align="center", fig.height=6, fig.width=10}
-
-check_model(lm_full_w)
-
-```
-
-Summary table
-```{r echo=FALSE, results='hide', warning=FALSE, message=FALSE}
-# Tidy up model results and calculate 95% CI
-model_summary <- lm_full_w %>%
-  broom::tidy(conf.int = TRUE) %>%    # Adds 95% CI columns
-  dplyr::mutate(
-    p.value = formatC(p.value, format = "e", digits = 2) # Format p-value for scientific notation
-  ) %>%
-  dplyr::select(term, estimate, conf.low, conf.high, statistic, p.value) # Select relevant columns
-
-# Create a publication-ready table with conditional bold formatting
-table2 <- model_summary %>%
-  kable("html", col.names = c("Term", "Estimate", "Lower 95% CI", "Upper 95% CI", "t value", "p-value"),
-        digits = 3, align = "c") %>%
-  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
-    row_spec(which(as.numeric(model_summary$p.value) < 0.05), bold = TRUE)  
-
-
-```
-
-```{r}
-table2
+gtsummary::tbl_regression(lm_full,  add_pairwaise_contrasts = TRUE)
 ```
 
 
-## Model: Divergence
-Finally we analyze the effect of divergence, temperature, nutrients and richness on biomass temporal stability using a linear model. 
-
-```{r echo=TRUE}
-
-lm_divergence<-lm(data=complete_aggr,log10(stability)~divergence + as.numeric(richness)+nutrients+temperature)
-                  
-```
-
-
-Check model's assumptions
-```{r model_check3, fig.cap="model check 3.", fig.align="center", fig.height=6, fig.width=10}
-
-check_model(lm_divergence)
-
-
-```
-
-Summary table
-```{r echo=FALSE, results='hide', warning=FALSE, message=FALSE}
-# Tidy up model results and calculate 95% CI
-model_summary <- lm_divergence %>%
-  broom::tidy(conf.int = TRUE) %>%    # Adds 95% CI columns
-  dplyr::mutate(
-    p.value = formatC(p.value, format = "e", digits = 2) # Format p-value for scientific notation
-  ) %>%
-  dplyr::select(term, estimate, conf.low, conf.high, statistic, p.value) # Select relevant columns
-# Create a publication-ready table with conditional bold formatting
-table3 <- model_summary %>%
-  kable("html", col.names = c("Term", "Estimate", "Lower 95% CI", "Upper 95% CI", "t value", "p-value"),
-        digits = 3, align = "c") %>%
-  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed")) %>%
-    row_spec(which(as.numeric(model_summary$p.value) < 0.05), bold = TRUE)  
-
-```
-
-```{r}
-table3
-```
-
-
-```{r}
-
-anova(lm_full,lm_full_w,lm_divergence)
-
-```
-
-```{r}
-AIC(lm_full, lm_full_w, lm_divergence)
-```
-
-```{r}
-mod1 <- lm(data=complete_aggr,log10(stability)~log10(imbalance_f))
-check_model(mod1)
-summary(mod1)
-
-```
-
-
-
-```{r}
-mod2 <- lm(data=complete_aggr,log10(stability)~(divergence))
-check_model(mod2)
-summary(mod2)
-```
-
-```{r}
-mod3 <- lm(data=complete_aggr,log10(stability)~log10(imbalance_r))
-check_model(mod3)
-summary(mod3)
-```
 ### sum vs. weighted_sum
 
-We now look at how fundamental and realised imbalance are related to each other. 
+We now look at how fundamental and realised balance are related to each other. 
 
-```{r Cor_sum_weighted_sum, results='hide', warning=FALSE, fig.cap='Relationship between fundamental and realised imbalance.', fig.align="center", fig.height=6, fig.width=8}
+```{r Cor_sum_weighted_sum, results='hide', warning=FALSE, fig.cap='Relationship between fundamental and realised balance.', fig.align="center", fig.height=6, fig.width=8}
 
 richness2<-complete_aggr%>%dplyr::filter(richness==2)
-cor_r2<-cor.test(log10(richness2$imbalance_f),log10(richness2$imbalance_r))$estimate
+cor_r2<-cor.test(log10(richness2$balance_f),log10(richness2$balance_r))$estimate
 
 richness3<-complete_aggr%>%dplyr::filter(richness==3)
-cor_r3<-cor.test(log10(richness3$imbalance_f),log10(richness3$imbalance_r))$estimate
+cor_r3<-cor.test(log10(richness3$balance_f),log10(richness3$balance_r))$estimate
 
 richness4<-complete_aggr%>%dplyr::filter(richness==4)
-cor_r4<-cor.test(log10(richness4$imbalance_f),log10(richness4$imbalance_r))$estimate
+cor_r4<-cor.test(log10(richness4$balance_f),log10(richness4$balance_r))$estimate
 
 
-plot_cor<-ggplot(data=complete_aggr,aes(x=log10(imbalance_f),y=imbalance_r%>%log10(
+plot_cor<-ggplot(data=complete_aggr,aes(x=log10(balance_f),y=balance_r%>%log10(
 )))+
   geom_point(aes(color=richness))+
   theme_bw()+
@@ -688,8 +770,8 @@ plot_cor<-ggplot(data=complete_aggr,aes(x=log10(imbalance_f),y=imbalance_r%>%log
         strip.background = element_rect(fill = "grey80", color = NA),  
     strip.text = element_text(size = 12),legend.position="none") +
    geom_abline(slope = 1, intercept = 0, color = "black")+
-   xlab(expression(log(imbalance)["fund"] )) +
-  ylab(expression(log(imbalance)["real"] ))+
+   xlab(expression(log(balance)["fund"] )) +
+  ylab(expression(log(balance)["real"] ))+
   facet_wrap(~richness, labeller = as_labeller(function(x) paste0("richness = ", x)))+
   scale_color_viridis_d(option = "inferno", begin = 0.2, end = 0.8) 
 
@@ -705,7 +787,7 @@ plot_cor
 
 
 # Asynchrony
-Response diversity (aka imbalance) has been suggested as a mechanism that promotes temporal stability of community biomass by promoting species asynchrony.
+Response diversity (aka balance) has been suggested as a mechanism that promotes temporal stability of community biomass by promoting species asynchrony.
 We thus calculated the asynchrony index suggested by Gross et al. (2014) to calculate the effect of asynchrony on temporal stability and to see how reponse diversity relate to asynchrony.
 The index ranges between -1 and 1, with -1 indicating perfect asyncrony and 1 being perfectly synchronous, and 0 indicating random variation.
 
@@ -761,11 +843,11 @@ plot_asynch_CV_G<-ggplot(data=async_aggr,aes(x=-synchrony_Gross,y=log10(1/CV),co
 plot_asynch_CV_G
 
 ```
-### Plot Asynchrony Gross vs fundamental imbalance
+### Plot Asynchrony Gross vs fundamental balance
 
-```{r async, fig.cap='Relatioship between asynchrony and fundamental imbalance divided by nutrient level.', fig.align="center", fig.height=6, fig.width=8}
+```{r async, fig.cap='Relatioship between asynchrony and fundamental balance divided by nutrient level.', fig.align="center", fig.height=6, fig.width=8}
 
-plot_asynch_CV_G<-ggplot(data=async_aggr,aes(x=log10(imbalance_f),y=-synchrony_Gross,color=nutrients))+
+plot_asynch_CV_G<-ggplot(data=async_aggr,aes(x=log10(balance_f),y=-synchrony_Gross,color=nutrients))+
   geom_point()+
   geom_smooth(method="lm",show.legend=F)+
   theme_classic()+
@@ -777,7 +859,7 @@ plot_asynch_CV_G<-ggplot(data=async_aggr,aes(x=log10(imbalance_f),y=-synchrony_G
         axis.title.y = element_text(size = 16),
         strip.background = element_rect(fill = "grey80", color = NA),  
     strip.text = element_text(size = 12),legend.position="none") +
-   xlab(expression(log(imbalance)["fund"] )) +
+   xlab(expression(log(balance)["fund"] )) +
   ylab("Asynchrony")+
   facet_wrap(~nutrients, labeller = as_labeller(function(x) paste0("nutrients = ", x)))+
   scale_color_viridis_d(option = "inferno", begin = 0.2, end = 0.8)
@@ -790,14 +872,14 @@ plot_asynch_CV_G
 # SEM 
 
 
-Now, we use a structural equation model (SEM) to explore how stability is influenced by asynchrony, temperature, nutrient levels, imbalance, and richness, with asynchrony also modeled as dependent on imbalance, nutrients, and richness.
+Now, we use a structural equation model (SEM) to explore how stability is influenced by asynchrony, temperature, nutrient levels, balance, and richness, with asynchrony also modeled as dependent on balance, nutrients, and richness.
 
 ```{r echo=FALSE, warning=FALSE, results='hide'}
 # Ensure the data is ungrouped before applying transformations
 sem_aggr <- async_aggr %>%
   ungroup() %>%  # Ensure there is no grouping
   mutate(
-    log_imbalance_f = log10(imbalance_f),
+    log_balance_f = log10(balance_f),
     stability = log10(1 / CV),
     richness = as.numeric(richness),
     temperature=temperature,
@@ -830,13 +912,13 @@ library(lavaan)
 model1B <- '
   stability ~ asynchrony_Gross
   +temperature
-  
-  +log_imbalance_f+
+  +nutrients
+  +log_balance_f+
   richness
 
   
-  asynchrony_Gross ~ log_imbalance_f
-  
+  asynchrony_Gross ~ log_balance_f
+  +nutrients
   +richness
 '
 
@@ -846,7 +928,7 @@ model1B <- '
 
 # Fit the model
 
-fit1B <- sem(model1B,estimator="MLM",meanstructure = TRUE,data = sem_aggr%>%dplyr::filter(!is.na(synchrony_Gross)))
+fit1B <- sem(model1B, estimator="MLM",meanstructure = TRUE,data = sem_aggr%>%dplyr::filter(!is.na(synchrony_Gross)))
 
 
 # Summarize the results
@@ -872,13 +954,13 @@ Interpretation of Pathways
 
 *Nutrients*: Positive and highly significant, suggesting that greater nutrient availability enhances stability, possibly through support for higher productivity or resource buffering.
 
-*Imbalance*: Negative and significant effect, where greater imbalance reduces stability.
+*balance*: Negative and significant effect, where greater balance reduces stability.
 Richness: Not significant, indicating that within this model, richness does not have a notable effect on stability.
 
 
 **Asynchrony**:
 
-*Imbalance*: Negative and significant, suggesting that greater imbalance reduces asynchrony.
+*balance*: Negative and significant, suggesting that greater balance reduces asynchrony.
 
 *Nutrients*: Negative and highly significant effect, indicating that higher nutrient concentrations are associated with lower asynchrony, possibly due to homogenizing effects of nutrient availability.
 
@@ -888,23 +970,23 @@ Richness: Not significant, indicating that within this model, richness does not 
 
 *Stability*: The model explains 57% of the variance in stability, suggesting a substantial amount of stability is accounted for by these factors.
 
-*Asynchrony*: The model explains 30.6% of the variance in asynchrony, indicating that while imbalance, nutrients, and richness contribute, other factors may also play a role in driving asynchrony.
+*Asynchrony*: The model explains 30.6% of the variance in asynchrony, indicating that while balance, nutrients, and richness contribute, other factors may also play a role in driving asynchrony.
 
 **Summary**
 
-This SEM model demonstrates that stability in the ecosystem is positively associated with asynchrony and nutrient levels, but negatively associated with temperature and imbalance. Interestingly, species richness has no direct impact on stability but does reduce asynchrony, indicating indirect complexity in the stability-dynamics relationship. This highlights the role of environmental and community factors in ecosystem stability, with asynchrony serving as a crucial intermediary in maintaining stability in fluctuating conditions.
+This SEM model demonstrates that stability in the ecosystem is positively associated with asynchrony and nutrient levels, but negatively associated with temperature and balance. Interestingly, species richness has no direct impact on stability but does reduce asynchrony, indicating indirect complexity in the stability-dynamics relationship. This highlights the role of environmental and community factors in ecosystem stability, with asynchrony serving as a crucial intermediary in maintaining stability in fluctuating conditions.
 
 ```{r SEM, fig.cap = 'SEM.', fig.align="center", fig.height=6, fig.width=8}
 knitr::include_graphics(("SEM.png"))
 
 ```
 
-Structural equation model (SEM) of the relationship between fundamental imbalance, asynchrony, richness, nutrients, temperature and temporal stability. The model shows that fundamental imbalance has a negative effect on asynchrony, which in turn has a positive effect on temporal stability. The model also shows that fundamental imbalance has a direct negative effect on temporal stability. Temperature has a direct negative effect on temporal stability, while nutrients have a direct positive effect on temporal stability. Richness has a direct negative effect on asynchrony, but no direct effect on temporal stability. 
+Structural equation model (SEM) of the relationship between fundamental balance, asynchrony, richness, nutrients, temperature and temporal stability. The model shows that fundamental balance has a negative effect on asynchrony, which in turn has a positive effect on temporal stability. The model also shows that fundamental balance has a direct negative effect on temporal stability. Temperature has a direct negative effect on temporal stability, while nutrients have a direct positive effect on temporal stability. Richness has a direct negative effect on asynchrony, but no direct effect on temporal stability. 
 
 
 
 
-#Species Interactions
+# Species Interactions
 ```{r results='hide', echo=FALSE, warning=FALSE, message=FALSE}
 interactions_df <- read_csv("Data/interactions_df_var_thetas.csv")
 
@@ -927,23 +1009,29 @@ int_aggr$theta[is.na(int_aggr$theta)]="none"
 
 
 ```{r}
-mixed_M_int<-lm(data=int_aggr%>%dplyr::filter(theta%in%c("none","var")),log10(stability)~log10(imbalance_f)+nutrients+temperature+as.numeric(richness)+mean_interaction)
+lm_M_int<-lm(data=int_aggr%>%dplyr::filter(theta%in%c("none","var")),log10(stability)~log10(balance_f)+nutrients+temperature+as.numeric(richness)+mean_interaction)
 ```
 
 
 check model assumptions
 ```{r model_check_mixed, fig.cap='model check 1.', fig.align="center", fig.height=9, fig.width=12}
-check_model(mixed_M_int)
+check_model(lm_M_int)
 ```
 
 
 ```{r}
-summary(mixed_M_int)
+summary(lm_M_int)
 ```
 
 
+```{r}
 
-```{r interactions, fig.cap='Relatioship between asynchrony and fundamental imbalance divided by nutrient level.', fig.align="center", fig.height=6, fig.width=8}
+anova(lm_M_int)
+
+```
+
+
+```{r interactions, fig.cap='Relatioship between asynchrony and fundamental balance divided by nutrient level.', fig.align="center", fig.height=6, fig.width=8}
 
 
 
@@ -964,45 +1052,5 @@ plot_int_stab<-ggplot(data=int_aggr%>%dplyr::filter(theta%in%c("none","var")),ae
 
 
 plot_int_stab
-```
-
-
-
-
-```{r}
-
-int_aggr<-int_aggr%>%mutate(richness=as.numeric(richness))
-
-
-sem_aggr<-full_join(sem_aggr,int_aggr%>%dplyr::select(mean_interaction,sample_ID,theta))
-
-model_int <- '
-  stability ~ asynchrony_Gross
-  +temperature
-  +nutrients
-  +log_imbalance_f+
-  richness+
-  mean_interaction
-
-  
-  asynchrony_Gross ~ log_imbalance_f
-  +nutrients
-  +richness+
-  mean_interaction
-'
-
-
-
-
-
-# Fit the model
-
-
-
-fit_int <- sem(model_int, estimator="MLM",meanstructure = TRUE,data = sem_aggr%>%dplyr::filter(!is.na(asynchrony_Gross),theta%in%c("none","var")))
-
-
-# Summarize the results
-summary(fit_int, standardized = TRUE,rsquare=T, fit.measures = TRUE)
 ```
 
