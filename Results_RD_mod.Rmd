@@ -986,8 +986,9 @@ model1B <- '
 
   
   asynchrony_Gross ~ log_balance_f
-  +nutrients
+  +nutrients+
   +richness
+  
 '
 
 
@@ -1100,7 +1101,7 @@ anova(lm_M_int)
 
 
 
-plot_int_stab<-ggplot(data=int_aggr%>%dplyr::filter(theta%in%c("none","var")),aes(x=mean_interaction,y=-synchrony_Gross,color=nutrients))+
+plot_int_stab<-ggplot(data=int_aggr%>%dplyr::filter(theta%in%c("none","var")),aes(x=mean,y=-synchrony_Gross,color=nutrients))+
   geom_point()+
   geom_smooth(method="lm",show.legend=F)+
   theme_classic() +
@@ -1187,32 +1188,109 @@ sem_aggr2 <- int_aggr %>%
 
 model1B <- '
   stability ~ asynchrony_Gross
-  +nutrients
-  +log_balance_f+
-  richness +
-  mean_interaction+
+  +log_balance_f
+  +richness
+  +mean_int_strength+
+  nutrients+
   temperature
+
+
 
   
   asynchrony_Gross ~ log_balance_f
-  +nutrients
   +richness+
-  mean_interaction
+  mean_int_strength+
+  nutrients
+
 '
 
 
 # Fit the model
 
-fit1B <- sem(model1B, estimator="MLM",meanstructure = TRUE,data = sem_aggr2%>%dplyr::filter(!is.na(asynchrony_Gross), theta%in%c("none","var")))
-
+fit1B <- sem(model1B,estimator="MLM",meanstructure = TRUE,data = sem_aggr2%>%dplyr::filter(!is.na(asynchrony_Gross), theta%in%c("none","var")))
+#modificationindices(fit1B)
 
 # Summarize the results
 summary(fit1B, standardized = TRUE,rsquare=T, fit.measures = TRUE)
+
+
+
 
 ```
 
 ```{r SEM2, fig.cap = 'SEM.', fig.align="center", fig.height=6, fig.width=8}
 knitr::include_graphics(("SEM2.png"))
+
+
+```
+
+
+
+
+#test population stability
+
+```{r}
+
+
+pop_aggr<-complete_ts%>%group_by(sample_ID,predict_spec)%>%summarize(pop_CV=sd(biomass)/mean(biomass),mean_biom_contribution=mean(biom_contribution,na.rm=T))
+
+# Lehman & Tilman (2000), THIBAUT & Connolli (2013), Gross et al. (2014)
+
+pop_aggr<-pop_aggr%>%group_by(sample_ID)%>%summarize(w_pop_CV=sum(pop_CV*mean_biom_contribution),na.rm=T)
+
+pop_aggr<-pop_aggr%>%group_by(sample_ID)%>%full_join(async_aggr,pop_aggr,by="sample_ID")
+
+
+
+
+plot_pop_aggr_balance<-ggplot(data=pop_aggr,aes(y=log10(stability),x=log10(1/w_pop_CV),color=nutrients))+
+  geom_point()+
+  geom_smooth(method="lm")
+
+m1<-lm(data=pop_aggr,log10(stability)~log10(balance_f)+richness+log10(1/w_pop_CV)+temperature+nutrients)
+check_model(m1)
+summary(m1)
+anova(m1)
+
+sem_aggr3 <- pop_aggr %>%
+  ungroup() %>%  # Ensure there is no grouping
+  mutate(
+    log_balance_f = log10(balance_f),
+    stability = log10(1 / CV),
+    richness = as.numeric(richness),
+    temperature=temperature,
+    asynchrony_Gross= (-synchrony_Gross),
+    log_pop_stab=log10(1/w_pop_CV)
+    #Keep it as an ordered factor
+  )
+
+model1C <- '
+  stability ~ asynchrony_Gross
+  +log_pop_stab
+  +richness+
+  nutrients+
+  temperature
+
+
+
+  
+  asynchrony_Gross ~ log_balance_f
+  +richness+
+  nutrients
+  
+  
+  log_pop_stab~log_balance_f+richness+nutrients+temperature
+
+'
+
+
+# Fit the model
+
+fit1C <- sem(model1C,estimator="MLM",meanstructure = TRUE,data = sem_aggr3%>%dplyr::filter(!is.na(asynchrony_Gross)))
+modificationindices(fit1C)
+
+# Summarize the results
+summary(fit1C, standardized = TRUE,rsquare=T, fit.measures = TRUE)
 
 ```
 
