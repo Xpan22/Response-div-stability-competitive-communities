@@ -1090,8 +1090,8 @@ anova_tidy %>%
     )
   ) %>%
   tab_options(
-    table.width = px(1000),            # Adjust table width (e.g., 400px)
-    table.font.size = px(20),        # Adjust font size (e.g., 12px)
+    table.width = px(800),            # Adjust table width (e.g., 400px)
+    table.font.size = px(16),        # Adjust font size (e.g., 12px)
     data_row.padding = px(10)         # Adjust row padding (e.g., 4px for more compact rows)
   )
 
@@ -1390,3 +1390,71 @@ Model Fit: The model has an excellent fit, as indicated by the fit indices.
 Stability: Community stability is strongly influenced by both population stability and asynchrony among species, with population stability being the stronger predictor.
 Asynchrony and Balance: Asynchrony decreases with increasing balance and nutrients, suggesting that these factors promote more synchronized fluctuations among species.
 Population Stability and Nutrients: Higher nutrient levels are associated with increased population stability, suggesting that nutrient availability supports stable population dynamics. Conversely, higher balance is associated with decreased population stability.
+
+
+
+# When will asynchrony be more important than population stability?
+```{r}
+source("r/our_functions.r")
+## Create the communities
+num_spp <- c(2, 4, 8, 16)
+max_minus_min <- round(seq(1, 7.5, length = 45),3)
+mean <- round(seq(-5, 5, length = 49),3)
+rd_vals <- function(num_spp, max_minus_min, mean) {
+  seq(mean-max_minus_min/2, mean+max_minus_min/2, length = num_spp)
+}
+dd <- crossing(num_spp,
+               max_minus_min,
+               mean) %>%
+  rowwise() %>%
+  mutate(rd_vals = list(rd_vals(num_spp, max_minus_min, mean))) %>%
+  unnest(cols = rd_vals)
+```
+
+```{r}
+## calculate the diversity metrics
+summary_stats <- dd %>%
+  group_by(num_spp, max_minus_min, mean) %>%
+  summarise(dissimilarity = resp_div(rd_vals,sign_sens = FALSE),
+            divergence = resp_div(rd_vals,sign_sens = TRUE),
+            balance = abs(sum(rd_vals)),
+            magnitude = sum(abs(rd_vals))) %>%
+  pivot_longer(names_to = "variable", values_to = "value", 4:5)
+
+
+```
+
+
+```{r}
+# plot summary stats balance vs magnitude by num_spp
+summary_stats %>%
+  ggplot(aes(x = balance, y = magnitude)) +
+  geom_point() +
+  facet_wrap( ~ num_spp, scales = "free") +
+  xlab("Balance") +
+  ylab("Magnitude")
+
+# create a new column called range with the range of magnitude values for each balance value
+summary_stats <- summary_stats %>%
+  group_by(num_spp, balance) %>%
+  mutate(range = max(magnitude) - min(magnitude),
+         mean = mean(magnitude))
+
+
+
+
+library(scales)
+# modify the above plot so that the gradient is present in each panel
+summary_stats %>%
+  group_by(num_spp) %>%
+  mutate(magnitude_rescaled = rescale(balance / magnitude)) %>% # Rescale within each group
+  ggplot(aes(x = balance, y = magnitude, color = magnitude_rescaled)) +
+  geom_point() +
+  facet_wrap(~num_spp, scales = "free") +
+  xlab("Balance") +
+  ylab("Magnitude") +
+  scale_color_viridis_c(option = "plasma") +
+  labs(color = "Community 1/Divergence") +
+  theme_minimal()
+
+```
