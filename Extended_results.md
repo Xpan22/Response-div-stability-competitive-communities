@@ -1,7 +1,7 @@
 ---
 title: "Extended results for: The balance of nature: Critical Role of Species Intrinsic Responses for Stability"
 author: "Til Hämmig, Francesco Polazzo, Owen L. Petchey, Frank Pennekamp"
-date: "21 November, 2024"
+date: "29 November, 2024"
 output:
   bookdown::html_document2:
     toc: true
@@ -23,10 +23,10 @@ editor_options:
 
 # Introduction
 
-The purpose of this document is to provide a reproducible record of all analyses and figures in the main article. The main article is focused on the effect of species' intrinsic responses on community stability in fluctuating environments. We are going to look at the effect of the distribution of species responses, richness, temperature and nutrients on community temporal stability. Specifically, we are going to look at the effect of fundamental balance (our measurement of the distribution of species' intrinsic responses) on temporal stability. Species' intrinsic responses to environmental change can stabilise community biomass in two ways: through response diversity and /or through population stability. Thus, as response diversity is thought to stabilize temporal stability of aggregate community properties via asynchrony, we are going to look at the relationship between response diversity and asynchrony. Subsequently, we are going to look at the relationship between population stability and temporal stability of community biomass.
+The purpose of this document is to provide a reproducible record of all analyses and figures in the main article. The main article is focused on the effect of species' intrinsic responses on community stability in fluctuating environments. We are going to look at the effect of the distribution of species responses, richness, temperature and nutrients on community temporal stability. Specifically, we are going to look at the effect of fundamental imbalance (our measurement of the distribution of species' intrinsic responses) on temporal stability. Species' intrinsic responses to environmental change can stabilise community biomass in two ways: through response diversity and /or through population stability. Thus, as response diversity is thought to stabilize temporal stability of aggregate community properties via asynchrony, we are going to look at the relationship between response diversity and asynchrony. Subsequently, we are going to look at the relationship between population stability and temporal stability of community biomass.
 Finally, we use a structural equation model to test the direct and indirect effects of balance on temporal stability of community biomass.
 
-In this document, we also analyse the predictive power of balance and divergence on temporal stability, and we compare the unique explanatory power of balance and divergence. We also look at the interaction between divergence and richness, and between balance and richness. Finally, we assess variable importance using the relative importance of predictors in the full model. This part of the document (section 5), is not included in the main article, but it is an important part of the analysis that justify adopting balance instead of divergence, which was the original metric used to design the experiment.
+In this document, we also analyse the predictive power of imbalance and divergence on temporal stability, and we compare the unique explanatory power of imbalance and divergence. We also look at the interaction between divergence and richness, and between imbalance and richness. Finally, we assess variable importance using the relative importance of predictors in the full model. This part of the document (section 5), is not included in the main article, but it is an important part of the analysis that justify adopting imbalance instead of divergence, which was the original metric used to design the experiment.
 
 This document is produced by an Rmarkdown file that includes code to reproduce from data all results presented in the main article.
 
@@ -35,138 +35,6 @@ This document is produced by an Rmarkdown file that includes code to reproduce f
 # Load datasets, Data wrangling and balance calculation
 
 
-``` r
-divergence_df <- read_csv("Data/divergence_df.csv")
-load("Data/dens_biomass_poly.RData")
-
-dd_all_pred<-read.csv("Data/morph_dd_pred.csv")
-dd_all_pred_nonoise<-read.csv("Data/morph_dd_pred_nonoise.csv")
-
-load("Data/ciliate_traits.Rdata")
-
-df_slopes <- read_csv("Data/df_slopes_cor.csv")
-
-# needs to have id_new variable
-ciliate_traits <- ciliate_traits %>%
-  dplyr::mutate(
-    # Remove dots from the date
-    cleaned_date = gsub("\\.", "", date),
-    # Extract the part of id after the underscore
-    id_suffix = sub(".*_(.*)", "\\1", id),
-    # Combine cleaned_date, id_suffix, and species_initial into a new variable
-    id_new = paste0(cleaned_date, id_suffix, composition)
-  ) %>%
-  # Optionally, remove the intermediate columns to clean up
-  dplyr::select(-cleaned_date, -id_suffix,-new_id)
-
-uniqueN(ciliate_traits$id_new)==nrow(ciliate_traits) # all unique  ;)
-
-id_dd<-full_join(dd_all_pred,dplyr::select(ciliate_traits,id_new,biomass),join_by("id_new"))
-
-
-## add day variable
-
-#create a day variable from the date variable
-
-id_dd<-dplyr::mutate(id_dd,date=as.Date(date,format = "%d.%m.%y"))
-
-earliest_date<-min(id_dd$date)
-days_since_earliest<-as.numeric(id_dd$date-earliest_date)+1
-id_dd<-id_dd%>%dplyr::mutate(day=days_since_earliest)
-
-#create a summarised df on microcosm level with each species seperate
-# Make sure, that we have n_frames and not N_frames
-names(id_dd)[names(id_dd) == "N_frames"] <- "n_frames"
-
-#extrapolation_factor <- 9.301902  # for 16 x magnification 
-extrapolation_factor <- 9.828125  # for 25 x magnification 
-video_biomass_species <- c( "C", "P", "S","D","L","T")
-
-biomasses <- id_dd %>%
-  dplyr::group_by( day,temperature,nutrients,sample_ID,composition,predict_spec) %>% # group  by xxx
-  dplyr::summarize(
-    biomass = sum(biomass * n_frames, na.rm = TRUE) / (1 * 125) # if not 3 videos corrections is done below with dens_factor
-  ) %>%
-  dplyr::mutate(
-    biomass = biomass * extrapolation_factor,
-    )
-
-biomasses<-biomasses%>%dplyr::mutate(biomass=biomass*1000)
-
-dd_ts_id<-biomasses
-
-#fill up missing dates with biomass<-0
-
-fill_dd<-expand.grid(sample_ID=unique(dd_ts_id$sample_ID),day=unique(dd_ts_id$day),predict_spec=unique(dd_ts_id$predict_spec))
-complete_ts<-full_join(fill_dd,dd_ts_id,join_by(sample_ID,day,predict_spec))
-
-complete_ts$biomass[is.na(complete_ts$biomass)]<-0
-complete_ts<-complete_ts%>%dplyr::mutate(composition=sub("_.*", "", sample_ID))
-complete_ts<-complete_ts %>%
-  dplyr::mutate(temperature = sapply(strsplit(as.character(sample_ID), "_"), function(x) paste(x[3], x[4], sep = "-")))
-complete_ts<- dplyr::mutate(complete_ts,nutrients = gsub(".*Nut(.*?)_.*", "\\1", sample_ID))
-
-# Now remove wrong combinations of composition and predict_spec / predict_spec
-
-complete_ts<- complete_ts %>%
-  rowwise() %>%
-  dplyr::filter(predict_spec %in% unlist(strsplit(composition, ""))) %>%
-  ungroup()  
-complete_ts<-dplyr::mutate(complete_ts,temperature=as.character(temperature),
-                    nutrients=as.character(nutrients),
-                    richness=nchar(composition))
-
-complete_ts<-complete_ts%>%group_by(sample_ID,composition,day)%>%dplyr::mutate(tot_biomass=sum(biomass))
-complete_ts<-complete_ts%>%dplyr::mutate(biom_contribution=biomass/tot_biomass)
-
-df_biomass_mod <- complete_ts
-
-complete_ts<-complete_ts%>%dplyr::mutate(temperature=paste0(temperature," °C"),
-                                      nutrients=paste0(nutrients," g/L"))
-
-
-# introduce slopes of 
-names(df_slopes)[names(df_slopes)=="species_initial"]<-"predict_spec"
-
-slope_ts<-full_join(dplyr::select(df_slopes,nutrients,predict_spec,temperature,slope),complete_ts)
-slope_ts<-slope_ts%>%dplyr::mutate(w_slope=biom_contribution*slope,
-                            sign=sign(slope))
-
-slope_ts<-slope_ts%>%group_by(sample_ID,temperature,nutrients,richness,composition,day,tot_biomass)%>%dplyr::summarize(
-  sum_w_slopes=abs(sum(w_slope)),
-                   mean_abs_slope=mean(abs(slope)),
-  sum_abs_slope=sum(abs(slope)),
-  abs_sum_slope=abs(sum(slope)),
-  symmetry=abs(sum(sign)))
-
-
-slope_ts<-slope_ts%>%dplyr::mutate(richness=as.factor(richness))
-
-
-##create new variable where it checks, where the last observation =0 is; with complete_ts
-aggr_ts <- slope_ts %>%
-  group_by( sample_ID) %>%
-  arrange(day) %>%
-  mutate(
-    # Create a flag for non-zero tot_biomass
-    non_zero_biomass = tot_biomass != 0,
-    # Find the last non-zero day
-    last_non_zero_day = ifelse(any(non_zero_biomass), max(day[non_zero_biomass], na.rm = TRUE), NA),
-    # Find the first zero day after the last non-zero day
-    first_zero_day = ifelse(
-      !is.na(last_non_zero_day),
-      min(day[!non_zero_biomass & day > last_non_zero_day], na.rm = TRUE),
-      NA
-    ),
-    # Flag for days after the first zero day
-    is_after_first_zero_day = ifelse(!is.na(first_zero_day), day > first_zero_day, FALSE)
-  ) %>%
-  ungroup()
-
-aggr_ts<-aggr_ts%>%mutate(rep_var=sub("_[^_]+$", "", sample_ID))
-
-biomass_ts<-aggr_ts%>%group_by(day,temperature,nutrients,richness)%>%summarize(tot_biom=mean(tot_biomass),se_tot_biom=sd(tot_biomass)/sqrt(as.numeric(length(tot_biomass))))
-```
 
 
 # Biomass
@@ -209,20 +77,20 @@ We look at the relationship between divergence (our original response diversity 
 
 Divergence is positively related to temporal stability, suggesting that response diversity promotes stability. However, the relationship between divergence and stability becomes weaker as richness increases. We think that this is due to divergence considering only the responses of the 2 most "responding" species. Thus, when species richness increases, disregarding the responses of the other species in the community except the 2 responding the most makes the relationship between response diversity and stability weaker. 
 
-This is why, after running the experiment, we developed another metric to measure response diversity, which we called **balance**, and that is presented in the main text of the publication. 
-Balance has several desirable features that makes it a more suitable metric than divergence: Independence of richness, higher predictive power, and accounts for the responses of all species in the community (as opposed to divergence that accounts for only the 2 most "responding" species).
+This is why, after running the experiment, we developed another metric to measure the distribution of species' responses, which we called **imbalance**, and that is presented in the main text of the publication. 
+Imbalance has several desirable features that makes it a more suitable metric than divergence: Independence of richness, higher predictive power, and accounts for the responses of all species in the community (as opposed to divergence that accounts for only the 2 most "responding" species).
 
-Here, we provide extensive evidence of why balance is a better metric to measure response diversity than divergence, and thus justifying focusing the analysis around balance.
+Here, we provide extensive evidence of why imbalance is a better metric to measure response diversity than divergence, and thus justifying focusing the analysis around imbalance.
 
-# Comparing Divergence and Balance
+# Comparing Divergence and Imbalance
 
-## Predictive power of Divergence and Balance
+## Predictive power of Divergence and Imbalance
 
-We first compare how well divergence and balance predict stability (predictive power). 
+We first compare how well divergence and imbalance predict stability (predictive power). 
 
 
 
-### Balance
+### Imbalance
 
 
 ``` r
@@ -247,7 +115,7 @@ mod2 <- lm(data=complete_aggr,log10(stability)~(divergence))
 
 
 
-**Table 1**: Comparison of model performance of divergence and balance as predictors of stability. Model 1 has balance as predictor and model 2 has divergence as predictor.
+**Table 1**: Comparison of model performance of divergence and imbalance as predictors of stability. Model 1 has imbalance as predictor and model 2 has divergence as predictor.
 <table class="table" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
  <thead>
   <tr>
@@ -285,12 +153,12 @@ mod2 <- lm(data=complete_aggr,log10(stability)~(divergence))
 </tbody>
 </table>
 
-A model with Balance as predictor performs better than one with divergence as predictor, and it explains more of the variance in stability than divergence.
+A model with imbalance as predictor performs better than one with divergence as predictor, and it explains more of the variance in stability than divergence.
 
 
 
 Moreover, from **Figure 3**, it looks like divergence declines in performance as richness increases. Let's test this analytically.
-To do than we build a linear model having stability as response variable and either log10(balance) or divergence as predictor for each richness level. We then extract the R squared of the models and their *standardised* estimates. (standardized estimates were calculated centering divergence and balance using the function scale()).
+To do than we build a linear model having stability as response variable and either log10(imbalance) or divergence as predictor for each richness level. We then extract the R squared of the models and their *standardised* estimates. (standardized estimates were calculated centering divergence and imbalance using the function scale()).
 
 
 ``` r
@@ -341,21 +209,21 @@ lm_balance_richness_R <- complete_aggr %>%
 
 
 <img src="Extended_results_files/figure-html/R_squared-1.png" style="display: block; margin: auto;" />
-**Figure 4**: Performance comparison of divergence vs balance. In (a), the R squared of linear models for divergence and balance are shown for each richness level. In (b), the estimates of the linear models for divergence and balance are shown for each richness level.
+**Figure 4**: Performance comparison of divergence vs imbalance. In (a), the R squared of linear models for divergence and imbalance are shown for each richness level. In (b), the estimates of the linear models for divergence and imbalance are shown for each richness level.
 
 
 
 
-We can see that the R squared of divergence as predictor of stability becomes smaller as richness increases, while the R squared of balance as predictor of stability does not (actually increases slightly). 
+We can see that the R squared of divergence as predictor of stability becomes smaller as richness increases, while the R squared of imbalance as predictor of stability does not (actually increases slightly). 
 
 
-## Comparing unique explanatory power of balance and divergence
+## Comparing unique explanatory power of imbalance and divergence
 
-Now we build a linear model were stability is modeled as a function of balance and divergence. 
-Then, we compared the variance explained by the full model compared to a model containing either only balance or only divergence.
+Now we build a linear model were stability is modeled as a function of imbalance and divergence. 
+Then, we compared the variance explained by the full model compared to a model containing either only imbalance or only divergence.
 
 
-### Full model - balance and divergence
+### Full model - imbalance and divergence
 
 
 ``` r
@@ -379,7 +247,7 @@ lm_div <- lm(data=complete_aggr,log10(stability)~divergence)
 
 
 
-### model with only balance
+### model with only imbalance
 
 ``` r
 lm_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f))
@@ -389,10 +257,10 @@ lm_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f))
 ```
 
 
-### Comparision full model vs divergence only and balance only
+### Comparision full model vs divergence only and imbalance only
 
 
-**Table 2**: Comparison of model performance of divergence, balance and both as predictors of stability. Model 1 has both balance and divergence as predictors, model 2 has divergence as predictor, and model 3 has balance as predictor.
+**Table 2**: Comparison of model performance of divergence, imbalance and both as predictors of stability. Model 1 has both imbalance and divergence as predictors, model 2 has divergence as predictor, and model 3 has imbalance as predictor.
 <table class="table" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
  <thead>
   <tr>
@@ -442,9 +310,9 @@ lm_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f))
 
 
 
-### Comparision full model vs balance only
+### Comparision full model vs imbalance only
 
-**Table 3**: Anova table: a model with both balance and divergence as predictors is not significantly different from a model with only balance as predictor.
+**Table 3**: Anova table: a model with both imbalance and divergence as predictors is not significantly different from a model with only imbalance as predictor.
 
 ``` r
 anova1 <- anova(lm_div_balance,  lm_balance)
@@ -480,23 +348,23 @@ anova_tidy1 %>%
 ```
 
 ```{=html}
-<div id="wcnayiimrp" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#wcnayiimrp table {
+<div id="cqsteipcav" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#cqsteipcav table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#wcnayiimrp thead, #wcnayiimrp tbody, #wcnayiimrp tfoot, #wcnayiimrp tr, #wcnayiimrp td, #wcnayiimrp th {
+#cqsteipcav thead, #cqsteipcav tbody, #cqsteipcav tfoot, #cqsteipcav tr, #cqsteipcav td, #cqsteipcav th {
   border-style: none;
 }
 
-#wcnayiimrp p {
+#cqsteipcav p {
   margin: 0;
   padding: 0;
 }
 
-#wcnayiimrp .gt_table {
+#cqsteipcav .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -522,12 +390,12 @@ anova_tidy1 %>%
   border-left-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_caption {
+#cqsteipcav .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#wcnayiimrp .gt_title {
+#cqsteipcav .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -539,7 +407,7 @@ anova_tidy1 %>%
   border-bottom-width: 0;
 }
 
-#wcnayiimrp .gt_subtitle {
+#cqsteipcav .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -551,7 +419,7 @@ anova_tidy1 %>%
   border-top-width: 0;
 }
 
-#wcnayiimrp .gt_heading {
+#cqsteipcav .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -563,13 +431,13 @@ anova_tidy1 %>%
   border-right-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_bottom_border {
+#cqsteipcav .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_col_headings {
+#cqsteipcav .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -584,7 +452,7 @@ anova_tidy1 %>%
   border-right-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_col_heading {
+#cqsteipcav .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -604,7 +472,7 @@ anova_tidy1 %>%
   overflow-x: hidden;
 }
 
-#wcnayiimrp .gt_column_spanner_outer {
+#cqsteipcav .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -616,15 +484,15 @@ anova_tidy1 %>%
   padding-right: 4px;
 }
 
-#wcnayiimrp .gt_column_spanner_outer:first-child {
+#cqsteipcav .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#wcnayiimrp .gt_column_spanner_outer:last-child {
+#cqsteipcav .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#wcnayiimrp .gt_column_spanner {
+#cqsteipcav .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -636,11 +504,11 @@ anova_tidy1 %>%
   width: 100%;
 }
 
-#wcnayiimrp .gt_spanner_row {
+#cqsteipcav .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#wcnayiimrp .gt_group_heading {
+#cqsteipcav .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -666,7 +534,7 @@ anova_tidy1 %>%
   text-align: left;
 }
 
-#wcnayiimrp .gt_empty_group_heading {
+#cqsteipcav .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -681,15 +549,15 @@ anova_tidy1 %>%
   vertical-align: middle;
 }
 
-#wcnayiimrp .gt_from_md > :first-child {
+#cqsteipcav .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#wcnayiimrp .gt_from_md > :last-child {
+#cqsteipcav .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#wcnayiimrp .gt_row {
+#cqsteipcav .gt_row {
   padding-top: 10px;
   padding-bottom: 10px;
   padding-left: 5px;
@@ -708,7 +576,7 @@ anova_tidy1 %>%
   overflow-x: hidden;
 }
 
-#wcnayiimrp .gt_stub {
+#cqsteipcav .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -721,7 +589,7 @@ anova_tidy1 %>%
   padding-right: 5px;
 }
 
-#wcnayiimrp .gt_stub_row_group {
+#cqsteipcav .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -735,15 +603,15 @@ anova_tidy1 %>%
   vertical-align: top;
 }
 
-#wcnayiimrp .gt_row_group_first td {
+#cqsteipcav .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#wcnayiimrp .gt_row_group_first th {
+#cqsteipcav .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#wcnayiimrp .gt_summary_row {
+#cqsteipcav .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -753,16 +621,16 @@ anova_tidy1 %>%
   padding-right: 5px;
 }
 
-#wcnayiimrp .gt_first_summary_row {
+#cqsteipcav .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_first_summary_row.thick {
+#cqsteipcav .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#wcnayiimrp .gt_last_summary_row {
+#cqsteipcav .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -772,7 +640,7 @@ anova_tidy1 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_grand_summary_row {
+#cqsteipcav .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -782,7 +650,7 @@ anova_tidy1 %>%
   padding-right: 5px;
 }
 
-#wcnayiimrp .gt_first_grand_summary_row {
+#cqsteipcav .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -792,7 +660,7 @@ anova_tidy1 %>%
   border-top-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_last_grand_summary_row_top {
+#cqsteipcav .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -802,11 +670,11 @@ anova_tidy1 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_striped {
+#cqsteipcav .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#wcnayiimrp .gt_table_body {
+#cqsteipcav .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -815,7 +683,7 @@ anova_tidy1 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_footnotes {
+#cqsteipcav .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -829,7 +697,7 @@ anova_tidy1 %>%
   border-right-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_footnote {
+#cqsteipcav .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -838,7 +706,7 @@ anova_tidy1 %>%
   padding-right: 5px;
 }
 
-#wcnayiimrp .gt_sourcenotes {
+#cqsteipcav .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -852,7 +720,7 @@ anova_tidy1 %>%
   border-right-color: #D3D3D3;
 }
 
-#wcnayiimrp .gt_sourcenote {
+#cqsteipcav .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -860,72 +728,72 @@ anova_tidy1 %>%
   padding-right: 5px;
 }
 
-#wcnayiimrp .gt_left {
+#cqsteipcav .gt_left {
   text-align: left;
 }
 
-#wcnayiimrp .gt_center {
+#cqsteipcav .gt_center {
   text-align: center;
 }
 
-#wcnayiimrp .gt_right {
+#cqsteipcav .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#wcnayiimrp .gt_font_normal {
+#cqsteipcav .gt_font_normal {
   font-weight: normal;
 }
 
-#wcnayiimrp .gt_font_bold {
+#cqsteipcav .gt_font_bold {
   font-weight: bold;
 }
 
-#wcnayiimrp .gt_font_italic {
+#cqsteipcav .gt_font_italic {
   font-style: italic;
 }
 
-#wcnayiimrp .gt_super {
+#cqsteipcav .gt_super {
   font-size: 65%;
 }
 
-#wcnayiimrp .gt_footnote_marks {
+#cqsteipcav .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#wcnayiimrp .gt_asterisk {
+#cqsteipcav .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#wcnayiimrp .gt_indent_1 {
+#cqsteipcav .gt_indent_1 {
   text-indent: 5px;
 }
 
-#wcnayiimrp .gt_indent_2 {
+#cqsteipcav .gt_indent_2 {
   text-indent: 10px;
 }
 
-#wcnayiimrp .gt_indent_3 {
+#cqsteipcav .gt_indent_3 {
   text-indent: 15px;
 }
 
-#wcnayiimrp .gt_indent_4 {
+#cqsteipcav .gt_indent_4 {
   text-indent: 20px;
 }
 
-#wcnayiimrp .gt_indent_5 {
+#cqsteipcav .gt_indent_5 {
   text-indent: 25px;
 }
 
-#wcnayiimrp .katex-display {
+#cqsteipcav .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#wcnayiimrp div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#cqsteipcav div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -964,9 +832,9 @@ anova_tidy1 %>%
 ```
 
 
-### Comparision full model vs divergence only and divergence only
+### Comparision full model vs imbalance only and divergence only
 
-**Table 4**: Anova table: a model with both balance and divergence as predictors is significantly better from a model with only divergence as predictor.
+**Table 4**: Anova table: a model with both imbalance and divergence as predictors is significantly better from a model with only divergence as predictor.
 
 ``` r
 anova2 <- anova(lm_div_balance,  lm_div)
@@ -1002,23 +870,23 @@ anova_tidy2 %>%
 ```
 
 ```{=html}
-<div id="zsazrmhlnv" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#zsazrmhlnv table {
+<div id="hapebqsnru" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#hapebqsnru table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#zsazrmhlnv thead, #zsazrmhlnv tbody, #zsazrmhlnv tfoot, #zsazrmhlnv tr, #zsazrmhlnv td, #zsazrmhlnv th {
+#hapebqsnru thead, #hapebqsnru tbody, #hapebqsnru tfoot, #hapebqsnru tr, #hapebqsnru td, #hapebqsnru th {
   border-style: none;
 }
 
-#zsazrmhlnv p {
+#hapebqsnru p {
   margin: 0;
   padding: 0;
 }
 
-#zsazrmhlnv .gt_table {
+#hapebqsnru .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -1044,12 +912,12 @@ anova_tidy2 %>%
   border-left-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_caption {
+#hapebqsnru .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#zsazrmhlnv .gt_title {
+#hapebqsnru .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -1061,7 +929,7 @@ anova_tidy2 %>%
   border-bottom-width: 0;
 }
 
-#zsazrmhlnv .gt_subtitle {
+#hapebqsnru .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -1073,7 +941,7 @@ anova_tidy2 %>%
   border-top-width: 0;
 }
 
-#zsazrmhlnv .gt_heading {
+#hapebqsnru .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -1085,13 +953,13 @@ anova_tidy2 %>%
   border-right-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_bottom_border {
+#hapebqsnru .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_col_headings {
+#hapebqsnru .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1106,7 +974,7 @@ anova_tidy2 %>%
   border-right-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_col_heading {
+#hapebqsnru .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1126,7 +994,7 @@ anova_tidy2 %>%
   overflow-x: hidden;
 }
 
-#zsazrmhlnv .gt_column_spanner_outer {
+#hapebqsnru .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1138,15 +1006,15 @@ anova_tidy2 %>%
   padding-right: 4px;
 }
 
-#zsazrmhlnv .gt_column_spanner_outer:first-child {
+#hapebqsnru .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#zsazrmhlnv .gt_column_spanner_outer:last-child {
+#hapebqsnru .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#zsazrmhlnv .gt_column_spanner {
+#hapebqsnru .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -1158,11 +1026,11 @@ anova_tidy2 %>%
   width: 100%;
 }
 
-#zsazrmhlnv .gt_spanner_row {
+#hapebqsnru .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#zsazrmhlnv .gt_group_heading {
+#hapebqsnru .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1188,7 +1056,7 @@ anova_tidy2 %>%
   text-align: left;
 }
 
-#zsazrmhlnv .gt_empty_group_heading {
+#hapebqsnru .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1203,15 +1071,15 @@ anova_tidy2 %>%
   vertical-align: middle;
 }
 
-#zsazrmhlnv .gt_from_md > :first-child {
+#hapebqsnru .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#zsazrmhlnv .gt_from_md > :last-child {
+#hapebqsnru .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#zsazrmhlnv .gt_row {
+#hapebqsnru .gt_row {
   padding-top: 10px;
   padding-bottom: 10px;
   padding-left: 5px;
@@ -1230,7 +1098,7 @@ anova_tidy2 %>%
   overflow-x: hidden;
 }
 
-#zsazrmhlnv .gt_stub {
+#hapebqsnru .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1243,7 +1111,7 @@ anova_tidy2 %>%
   padding-right: 5px;
 }
 
-#zsazrmhlnv .gt_stub_row_group {
+#hapebqsnru .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1257,15 +1125,15 @@ anova_tidy2 %>%
   vertical-align: top;
 }
 
-#zsazrmhlnv .gt_row_group_first td {
+#hapebqsnru .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#zsazrmhlnv .gt_row_group_first th {
+#hapebqsnru .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#zsazrmhlnv .gt_summary_row {
+#hapebqsnru .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1275,16 +1143,16 @@ anova_tidy2 %>%
   padding-right: 5px;
 }
 
-#zsazrmhlnv .gt_first_summary_row {
+#hapebqsnru .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_first_summary_row.thick {
+#hapebqsnru .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#zsazrmhlnv .gt_last_summary_row {
+#hapebqsnru .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1294,7 +1162,7 @@ anova_tidy2 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_grand_summary_row {
+#hapebqsnru .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1304,7 +1172,7 @@ anova_tidy2 %>%
   padding-right: 5px;
 }
 
-#zsazrmhlnv .gt_first_grand_summary_row {
+#hapebqsnru .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1314,7 +1182,7 @@ anova_tidy2 %>%
   border-top-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_last_grand_summary_row_top {
+#hapebqsnru .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1324,11 +1192,11 @@ anova_tidy2 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_striped {
+#hapebqsnru .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#zsazrmhlnv .gt_table_body {
+#hapebqsnru .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1337,7 +1205,7 @@ anova_tidy2 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_footnotes {
+#hapebqsnru .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1351,7 +1219,7 @@ anova_tidy2 %>%
   border-right-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_footnote {
+#hapebqsnru .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -1360,7 +1228,7 @@ anova_tidy2 %>%
   padding-right: 5px;
 }
 
-#zsazrmhlnv .gt_sourcenotes {
+#hapebqsnru .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1374,7 +1242,7 @@ anova_tidy2 %>%
   border-right-color: #D3D3D3;
 }
 
-#zsazrmhlnv .gt_sourcenote {
+#hapebqsnru .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -1382,72 +1250,72 @@ anova_tidy2 %>%
   padding-right: 5px;
 }
 
-#zsazrmhlnv .gt_left {
+#hapebqsnru .gt_left {
   text-align: left;
 }
 
-#zsazrmhlnv .gt_center {
+#hapebqsnru .gt_center {
   text-align: center;
 }
 
-#zsazrmhlnv .gt_right {
+#hapebqsnru .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#zsazrmhlnv .gt_font_normal {
+#hapebqsnru .gt_font_normal {
   font-weight: normal;
 }
 
-#zsazrmhlnv .gt_font_bold {
+#hapebqsnru .gt_font_bold {
   font-weight: bold;
 }
 
-#zsazrmhlnv .gt_font_italic {
+#hapebqsnru .gt_font_italic {
   font-style: italic;
 }
 
-#zsazrmhlnv .gt_super {
+#hapebqsnru .gt_super {
   font-size: 65%;
 }
 
-#zsazrmhlnv .gt_footnote_marks {
+#hapebqsnru .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#zsazrmhlnv .gt_asterisk {
+#hapebqsnru .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#zsazrmhlnv .gt_indent_1 {
+#hapebqsnru .gt_indent_1 {
   text-indent: 5px;
 }
 
-#zsazrmhlnv .gt_indent_2 {
+#hapebqsnru .gt_indent_2 {
   text-indent: 10px;
 }
 
-#zsazrmhlnv .gt_indent_3 {
+#hapebqsnru .gt_indent_3 {
   text-indent: 15px;
 }
 
-#zsazrmhlnv .gt_indent_4 {
+#hapebqsnru .gt_indent_4 {
   text-indent: 20px;
 }
 
-#zsazrmhlnv .gt_indent_5 {
+#hapebqsnru .gt_indent_5 {
   text-indent: 25px;
 }
 
-#zsazrmhlnv .katex-display {
+#hapebqsnru .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#zsazrmhlnv div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#hapebqsnru div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -1485,7 +1353,7 @@ anova_tidy2 %>%
 </div>
 ```
 
-Overall, balance explains more of the variance in stability than divergence, and there is virtually no difference between a model containing only balance and the full model.
+Overall, imbalance explains more of the variance in stability than divergence, and there is virtually no difference between a model containing only imbalance and the full model.
 
 
 
@@ -1540,23 +1408,23 @@ anova_tidy3 %>%
 ```
 
 ```{=html}
-<div id="uzrzlussov" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#uzrzlussov table {
+<div id="buwuusbhfb" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#buwuusbhfb table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#uzrzlussov thead, #uzrzlussov tbody, #uzrzlussov tfoot, #uzrzlussov tr, #uzrzlussov td, #uzrzlussov th {
+#buwuusbhfb thead, #buwuusbhfb tbody, #buwuusbhfb tfoot, #buwuusbhfb tr, #buwuusbhfb td, #buwuusbhfb th {
   border-style: none;
 }
 
-#uzrzlussov p {
+#buwuusbhfb p {
   margin: 0;
   padding: 0;
 }
 
-#uzrzlussov .gt_table {
+#buwuusbhfb .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -1582,12 +1450,12 @@ anova_tidy3 %>%
   border-left-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_caption {
+#buwuusbhfb .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#uzrzlussov .gt_title {
+#buwuusbhfb .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -1599,7 +1467,7 @@ anova_tidy3 %>%
   border-bottom-width: 0;
 }
 
-#uzrzlussov .gt_subtitle {
+#buwuusbhfb .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -1611,7 +1479,7 @@ anova_tidy3 %>%
   border-top-width: 0;
 }
 
-#uzrzlussov .gt_heading {
+#buwuusbhfb .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -1623,13 +1491,13 @@ anova_tidy3 %>%
   border-right-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_bottom_border {
+#buwuusbhfb .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_col_headings {
+#buwuusbhfb .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1644,7 +1512,7 @@ anova_tidy3 %>%
   border-right-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_col_heading {
+#buwuusbhfb .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1664,7 +1532,7 @@ anova_tidy3 %>%
   overflow-x: hidden;
 }
 
-#uzrzlussov .gt_column_spanner_outer {
+#buwuusbhfb .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1676,15 +1544,15 @@ anova_tidy3 %>%
   padding-right: 4px;
 }
 
-#uzrzlussov .gt_column_spanner_outer:first-child {
+#buwuusbhfb .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#uzrzlussov .gt_column_spanner_outer:last-child {
+#buwuusbhfb .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#uzrzlussov .gt_column_spanner {
+#buwuusbhfb .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -1696,11 +1564,11 @@ anova_tidy3 %>%
   width: 100%;
 }
 
-#uzrzlussov .gt_spanner_row {
+#buwuusbhfb .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#uzrzlussov .gt_group_heading {
+#buwuusbhfb .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1726,7 +1594,7 @@ anova_tidy3 %>%
   text-align: left;
 }
 
-#uzrzlussov .gt_empty_group_heading {
+#buwuusbhfb .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1741,15 +1609,15 @@ anova_tidy3 %>%
   vertical-align: middle;
 }
 
-#uzrzlussov .gt_from_md > :first-child {
+#buwuusbhfb .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#uzrzlussov .gt_from_md > :last-child {
+#buwuusbhfb .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#uzrzlussov .gt_row {
+#buwuusbhfb .gt_row {
   padding-top: 10px;
   padding-bottom: 10px;
   padding-left: 5px;
@@ -1768,7 +1636,7 @@ anova_tidy3 %>%
   overflow-x: hidden;
 }
 
-#uzrzlussov .gt_stub {
+#buwuusbhfb .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1781,7 +1649,7 @@ anova_tidy3 %>%
   padding-right: 5px;
 }
 
-#uzrzlussov .gt_stub_row_group {
+#buwuusbhfb .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1795,15 +1663,15 @@ anova_tidy3 %>%
   vertical-align: top;
 }
 
-#uzrzlussov .gt_row_group_first td {
+#buwuusbhfb .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#uzrzlussov .gt_row_group_first th {
+#buwuusbhfb .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#uzrzlussov .gt_summary_row {
+#buwuusbhfb .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1813,16 +1681,16 @@ anova_tidy3 %>%
   padding-right: 5px;
 }
 
-#uzrzlussov .gt_first_summary_row {
+#buwuusbhfb .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_first_summary_row.thick {
+#buwuusbhfb .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#uzrzlussov .gt_last_summary_row {
+#buwuusbhfb .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1832,7 +1700,7 @@ anova_tidy3 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_grand_summary_row {
+#buwuusbhfb .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1842,7 +1710,7 @@ anova_tidy3 %>%
   padding-right: 5px;
 }
 
-#uzrzlussov .gt_first_grand_summary_row {
+#buwuusbhfb .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1852,7 +1720,7 @@ anova_tidy3 %>%
   border-top-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_last_grand_summary_row_top {
+#buwuusbhfb .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1862,11 +1730,11 @@ anova_tidy3 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_striped {
+#buwuusbhfb .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#uzrzlussov .gt_table_body {
+#buwuusbhfb .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1875,7 +1743,7 @@ anova_tidy3 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_footnotes {
+#buwuusbhfb .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1889,7 +1757,7 @@ anova_tidy3 %>%
   border-right-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_footnote {
+#buwuusbhfb .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -1898,7 +1766,7 @@ anova_tidy3 %>%
   padding-right: 5px;
 }
 
-#uzrzlussov .gt_sourcenotes {
+#buwuusbhfb .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1912,7 +1780,7 @@ anova_tidy3 %>%
   border-right-color: #D3D3D3;
 }
 
-#uzrzlussov .gt_sourcenote {
+#buwuusbhfb .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -1920,72 +1788,72 @@ anova_tidy3 %>%
   padding-right: 5px;
 }
 
-#uzrzlussov .gt_left {
+#buwuusbhfb .gt_left {
   text-align: left;
 }
 
-#uzrzlussov .gt_center {
+#buwuusbhfb .gt_center {
   text-align: center;
 }
 
-#uzrzlussov .gt_right {
+#buwuusbhfb .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#uzrzlussov .gt_font_normal {
+#buwuusbhfb .gt_font_normal {
   font-weight: normal;
 }
 
-#uzrzlussov .gt_font_bold {
+#buwuusbhfb .gt_font_bold {
   font-weight: bold;
 }
 
-#uzrzlussov .gt_font_italic {
+#buwuusbhfb .gt_font_italic {
   font-style: italic;
 }
 
-#uzrzlussov .gt_super {
+#buwuusbhfb .gt_super {
   font-size: 65%;
 }
 
-#uzrzlussov .gt_footnote_marks {
+#buwuusbhfb .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#uzrzlussov .gt_asterisk {
+#buwuusbhfb .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#uzrzlussov .gt_indent_1 {
+#buwuusbhfb .gt_indent_1 {
   text-indent: 5px;
 }
 
-#uzrzlussov .gt_indent_2 {
+#buwuusbhfb .gt_indent_2 {
   text-indent: 10px;
 }
 
-#uzrzlussov .gt_indent_3 {
+#buwuusbhfb .gt_indent_3 {
   text-indent: 15px;
 }
 
-#uzrzlussov .gt_indent_4 {
+#buwuusbhfb .gt_indent_4 {
   text-indent: 20px;
 }
 
-#uzrzlussov .gt_indent_5 {
+#buwuusbhfb .gt_indent_5 {
   text-indent: 25px;
 }
 
-#uzrzlussov .katex-display {
+#buwuusbhfb .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#uzrzlussov div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#buwuusbhfb div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -2038,7 +1906,7 @@ While an ideal metric of response diversity should be independent of richness.
 
 
 
-We repeat the same model using balance instead of divergence.
+We repeat the same model using imbalance instead of divergence.
 
 ``` r
 lm_rich_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f)*scale(as.numeric(richness)))
@@ -2051,7 +1919,7 @@ lm_rich_balance <- lm(data=complete_aggr,log10(stability)~log10(balance_f)*scale
 
 
 
-**Table 6**: Type III anova table of the model with balance and richness as predictors of stability.
+**Table 6**: Type III anova table of the model with imbalance and richness as predictors of stability.
 
 ``` r
 anova4 <- car::Anova(lm_rich_balance, type = "III")
@@ -2086,23 +1954,23 @@ anova_tidy4 %>%
 ```
 
 ```{=html}
-<div id="znwsofscsa" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#znwsofscsa table {
+<div id="llrriekngl" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#llrriekngl table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#znwsofscsa thead, #znwsofscsa tbody, #znwsofscsa tfoot, #znwsofscsa tr, #znwsofscsa td, #znwsofscsa th {
+#llrriekngl thead, #llrriekngl tbody, #llrriekngl tfoot, #llrriekngl tr, #llrriekngl td, #llrriekngl th {
   border-style: none;
 }
 
-#znwsofscsa p {
+#llrriekngl p {
   margin: 0;
   padding: 0;
 }
 
-#znwsofscsa .gt_table {
+#llrriekngl .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -2128,12 +1996,12 @@ anova_tidy4 %>%
   border-left-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_caption {
+#llrriekngl .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#znwsofscsa .gt_title {
+#llrriekngl .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -2145,7 +2013,7 @@ anova_tidy4 %>%
   border-bottom-width: 0;
 }
 
-#znwsofscsa .gt_subtitle {
+#llrriekngl .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -2157,7 +2025,7 @@ anova_tidy4 %>%
   border-top-width: 0;
 }
 
-#znwsofscsa .gt_heading {
+#llrriekngl .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -2169,13 +2037,13 @@ anova_tidy4 %>%
   border-right-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_bottom_border {
+#llrriekngl .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_col_headings {
+#llrriekngl .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -2190,7 +2058,7 @@ anova_tidy4 %>%
   border-right-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_col_heading {
+#llrriekngl .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2210,7 +2078,7 @@ anova_tidy4 %>%
   overflow-x: hidden;
 }
 
-#znwsofscsa .gt_column_spanner_outer {
+#llrriekngl .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2222,15 +2090,15 @@ anova_tidy4 %>%
   padding-right: 4px;
 }
 
-#znwsofscsa .gt_column_spanner_outer:first-child {
+#llrriekngl .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#znwsofscsa .gt_column_spanner_outer:last-child {
+#llrriekngl .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#znwsofscsa .gt_column_spanner {
+#llrriekngl .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -2242,11 +2110,11 @@ anova_tidy4 %>%
   width: 100%;
 }
 
-#znwsofscsa .gt_spanner_row {
+#llrriekngl .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#znwsofscsa .gt_group_heading {
+#llrriekngl .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2272,7 +2140,7 @@ anova_tidy4 %>%
   text-align: left;
 }
 
-#znwsofscsa .gt_empty_group_heading {
+#llrriekngl .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -2287,15 +2155,15 @@ anova_tidy4 %>%
   vertical-align: middle;
 }
 
-#znwsofscsa .gt_from_md > :first-child {
+#llrriekngl .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#znwsofscsa .gt_from_md > :last-child {
+#llrriekngl .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#znwsofscsa .gt_row {
+#llrriekngl .gt_row {
   padding-top: 10px;
   padding-bottom: 10px;
   padding-left: 5px;
@@ -2314,7 +2182,7 @@ anova_tidy4 %>%
   overflow-x: hidden;
 }
 
-#znwsofscsa .gt_stub {
+#llrriekngl .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2327,7 +2195,7 @@ anova_tidy4 %>%
   padding-right: 5px;
 }
 
-#znwsofscsa .gt_stub_row_group {
+#llrriekngl .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2341,15 +2209,15 @@ anova_tidy4 %>%
   vertical-align: top;
 }
 
-#znwsofscsa .gt_row_group_first td {
+#llrriekngl .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#znwsofscsa .gt_row_group_first th {
+#llrriekngl .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#znwsofscsa .gt_summary_row {
+#llrriekngl .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -2359,16 +2227,16 @@ anova_tidy4 %>%
   padding-right: 5px;
 }
 
-#znwsofscsa .gt_first_summary_row {
+#llrriekngl .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_first_summary_row.thick {
+#llrriekngl .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#znwsofscsa .gt_last_summary_row {
+#llrriekngl .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2378,7 +2246,7 @@ anova_tidy4 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_grand_summary_row {
+#llrriekngl .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -2388,7 +2256,7 @@ anova_tidy4 %>%
   padding-right: 5px;
 }
 
-#znwsofscsa .gt_first_grand_summary_row {
+#llrriekngl .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2398,7 +2266,7 @@ anova_tidy4 %>%
   border-top-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_last_grand_summary_row_top {
+#llrriekngl .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2408,11 +2276,11 @@ anova_tidy4 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_striped {
+#llrriekngl .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#znwsofscsa .gt_table_body {
+#llrriekngl .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -2421,7 +2289,7 @@ anova_tidy4 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_footnotes {
+#llrriekngl .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -2435,7 +2303,7 @@ anova_tidy4 %>%
   border-right-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_footnote {
+#llrriekngl .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -2444,7 +2312,7 @@ anova_tidy4 %>%
   padding-right: 5px;
 }
 
-#znwsofscsa .gt_sourcenotes {
+#llrriekngl .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -2458,7 +2326,7 @@ anova_tidy4 %>%
   border-right-color: #D3D3D3;
 }
 
-#znwsofscsa .gt_sourcenote {
+#llrriekngl .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -2466,72 +2334,72 @@ anova_tidy4 %>%
   padding-right: 5px;
 }
 
-#znwsofscsa .gt_left {
+#llrriekngl .gt_left {
   text-align: left;
 }
 
-#znwsofscsa .gt_center {
+#llrriekngl .gt_center {
   text-align: center;
 }
 
-#znwsofscsa .gt_right {
+#llrriekngl .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#znwsofscsa .gt_font_normal {
+#llrriekngl .gt_font_normal {
   font-weight: normal;
 }
 
-#znwsofscsa .gt_font_bold {
+#llrriekngl .gt_font_bold {
   font-weight: bold;
 }
 
-#znwsofscsa .gt_font_italic {
+#llrriekngl .gt_font_italic {
   font-style: italic;
 }
 
-#znwsofscsa .gt_super {
+#llrriekngl .gt_super {
   font-size: 65%;
 }
 
-#znwsofscsa .gt_footnote_marks {
+#llrriekngl .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#znwsofscsa .gt_asterisk {
+#llrriekngl .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#znwsofscsa .gt_indent_1 {
+#llrriekngl .gt_indent_1 {
   text-indent: 5px;
 }
 
-#znwsofscsa .gt_indent_2 {
+#llrriekngl .gt_indent_2 {
   text-indent: 10px;
 }
 
-#znwsofscsa .gt_indent_3 {
+#llrriekngl .gt_indent_3 {
   text-indent: 15px;
 }
 
-#znwsofscsa .gt_indent_4 {
+#llrriekngl .gt_indent_4 {
   text-indent: 20px;
 }
 
-#znwsofscsa .gt_indent_5 {
+#llrriekngl .gt_indent_5 {
   text-indent: 25px;
 }
 
-#znwsofscsa .katex-display {
+#llrriekngl .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#znwsofscsa div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#llrriekngl div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -2578,7 +2446,7 @@ anova_tidy4 %>%
 </div>
 ```
 
-Balance does not significantly interact with richness, suggesting that the relationship between balance and stability is stable across richness levels.
+Imbalance does not significantly interact with richness, suggesting that the relationship between imbalance and stability is stable across richness levels.
 
 
 ## Variable importance
@@ -2594,41 +2462,58 @@ vip::vip(lm_div_balance)
 ```
 
 <img src="Extended_results_files/figure-html/vip1-1.png" style="display: block; margin: auto;" />
-**Figure 5**: Variable importance in the model including both balance and divergence as predictors of stability.
+**Figure 5**: Variable importance in the model including both imbalance and divergence as predictors of stability.
 
 
-We believe that the extensive evidence here provided justifies focusing the analysis around balance, and not divergence, as a metric of response diversity.
-We will thus only look at balance for the rest of the analysis. 
+We believe that the extensive evidence here provided justifies focusing the analysis around imbalance, and not divergence, as a metric of response diversity.
+We will thus only look at imbalance for the rest of the analysis. 
 
 # Effect RD
 
-We are now going to look at how response diversity (balance) affected temporal stability of total community biomass. We are going to look at the relationship between fundamental balance (so based only on species response surfaces measured in monoculture), an realised balance (measured accounting for species contribution to balance).
+We are now going to look at how imbalance affected temporal stability of total community biomass. We are going to look at the relationship between fundamental imbalance (so based only on species response surfaces measured in monoculture), an realised imbalance (measured accounting for species contribution to balance).
 
 This is fundamentally testing our most important hypothesis.
 
 <img src="Extended_results_files/figure-html/effect_RD-1.png" style="display: block; margin: auto;" />
-**Figure 6**: Effects of fundamental and realised response diversity (measured as balance) on total community biomass temporal stability.
+**Figure 6**: Effects of fundamental and realised imbalance on total community biomass temporal stability.
 
 
-We can see that balance is always negatively related to temporal stability, which means that response diversity promotes stability across richness levels. Interestingly, we see that there is little difference between fundamental and realised balance. Yet, as the richness increases, the relationship between realised balance and stability becomes steeper compared to fundamental balance. 
+We can see that imbalance is always negatively related to temporal stability, which means that balance in species responses promotes stability across richness levels. Interestingly, we see that there is little difference between fundamental and realised imbalance. Yet, as the richness increases, the relationship between realised imbalance and stability becomes steeper compared to fundamental balance. 
 
 
-But is the difference in the slope of fundamental and realised balance significant? We can test this using a linear model with interaction between balance and type (factor: fundamental or realised balance).
+But is the difference between fundamental and realised imbalance significant? We can test this using a linear model with both fundamental and realised imbalance as predictors of stability, and one with only fundamental imbalance as predictor of stability, and compare whether the models are significantly different.
 
-
-## Balance: realised vs fundamental
+## Imbalance: realised vs fundamental
 
 ``` r
 # compare if the slope of fundamental and realised balance is significantly different for each richness level
 # Fit the linear model with interaction
-model_F <- lm(log10(1/CV) ~ log10(balance_f) , data = complete_aggr)
-model_R_F <- lm(log10(1/CV) ~ log10(balance_f) +log10(balance_r) , data = complete_aggr)
+complete_aggr_2<- complete_aggr %>%
+  # Remove the units from the 'nutrients' and 'temperature' columns
+  mutate(
+    nutrients = as.numeric(gsub(" g/L", "", nutrients)),  # Convert nutrients to numeric
+    temperature = gsub(" °C", "", temperature)            # Remove the unit but keep as character
+  ) %>%
+  # Convert temperature ranges to numeric codes using case_when
+  mutate(
+    temperature = case_when(
+      temperature == "18-21" ~ 1,
+      temperature == "22-25" ~ 2,
+      temperature == "25-28" ~ 3,
+      TRUE ~ NA_real_         # Handle unexpected values with NA
+    )
+  )
+
+
+# Fit the linear model with interaction
+lm_full_int1<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nutrients)*scale(temperature)+richness)
+lm_full_int2<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+ log10(balance_r)+scale(nutrients)*scale(temperature)+richness)
 ```
 
 **Table 7**: Anova table of the model with only realised balance vs one with both realised and fundamental balance as predictors of stability.
 
 ``` r
-anova5 <- anova(model_F, model_R_F)
+anova5 <- anova(lm_full_int1, lm_full_int2)
 
 anova_tidy5 <- broom::tidy(anova5)
 # Display the tidy ANOVA table using gt with formatted p-values and adjusted size
@@ -2660,23 +2545,23 @@ anova_tidy5 %>%
 ```
 
 ```{=html}
-<div id="slaspbxyxo" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#slaspbxyxo table {
+<div id="yfqojnclco" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#yfqojnclco table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#slaspbxyxo thead, #slaspbxyxo tbody, #slaspbxyxo tfoot, #slaspbxyxo tr, #slaspbxyxo td, #slaspbxyxo th {
+#yfqojnclco thead, #yfqojnclco tbody, #yfqojnclco tfoot, #yfqojnclco tr, #yfqojnclco td, #yfqojnclco th {
   border-style: none;
 }
 
-#slaspbxyxo p {
+#yfqojnclco p {
   margin: 0;
   padding: 0;
 }
 
-#slaspbxyxo .gt_table {
+#yfqojnclco .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -2702,12 +2587,12 @@ anova_tidy5 %>%
   border-left-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_caption {
+#yfqojnclco .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#slaspbxyxo .gt_title {
+#yfqojnclco .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -2719,7 +2604,7 @@ anova_tidy5 %>%
   border-bottom-width: 0;
 }
 
-#slaspbxyxo .gt_subtitle {
+#yfqojnclco .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -2731,7 +2616,7 @@ anova_tidy5 %>%
   border-top-width: 0;
 }
 
-#slaspbxyxo .gt_heading {
+#yfqojnclco .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -2743,13 +2628,13 @@ anova_tidy5 %>%
   border-right-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_bottom_border {
+#yfqojnclco .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_col_headings {
+#yfqojnclco .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -2764,7 +2649,7 @@ anova_tidy5 %>%
   border-right-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_col_heading {
+#yfqojnclco .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2784,7 +2669,7 @@ anova_tidy5 %>%
   overflow-x: hidden;
 }
 
-#slaspbxyxo .gt_column_spanner_outer {
+#yfqojnclco .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2796,15 +2681,15 @@ anova_tidy5 %>%
   padding-right: 4px;
 }
 
-#slaspbxyxo .gt_column_spanner_outer:first-child {
+#yfqojnclco .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#slaspbxyxo .gt_column_spanner_outer:last-child {
+#yfqojnclco .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#slaspbxyxo .gt_column_spanner {
+#yfqojnclco .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -2816,11 +2701,11 @@ anova_tidy5 %>%
   width: 100%;
 }
 
-#slaspbxyxo .gt_spanner_row {
+#yfqojnclco .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#slaspbxyxo .gt_group_heading {
+#yfqojnclco .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2846,7 +2731,7 @@ anova_tidy5 %>%
   text-align: left;
 }
 
-#slaspbxyxo .gt_empty_group_heading {
+#yfqojnclco .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -2861,15 +2746,15 @@ anova_tidy5 %>%
   vertical-align: middle;
 }
 
-#slaspbxyxo .gt_from_md > :first-child {
+#yfqojnclco .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#slaspbxyxo .gt_from_md > :last-child {
+#yfqojnclco .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#slaspbxyxo .gt_row {
+#yfqojnclco .gt_row {
   padding-top: 10px;
   padding-bottom: 10px;
   padding-left: 5px;
@@ -2888,7 +2773,7 @@ anova_tidy5 %>%
   overflow-x: hidden;
 }
 
-#slaspbxyxo .gt_stub {
+#yfqojnclco .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2901,7 +2786,7 @@ anova_tidy5 %>%
   padding-right: 5px;
 }
 
-#slaspbxyxo .gt_stub_row_group {
+#yfqojnclco .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -2915,15 +2800,15 @@ anova_tidy5 %>%
   vertical-align: top;
 }
 
-#slaspbxyxo .gt_row_group_first td {
+#yfqojnclco .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#slaspbxyxo .gt_row_group_first th {
+#yfqojnclco .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#slaspbxyxo .gt_summary_row {
+#yfqojnclco .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -2933,16 +2818,16 @@ anova_tidy5 %>%
   padding-right: 5px;
 }
 
-#slaspbxyxo .gt_first_summary_row {
+#yfqojnclco .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_first_summary_row.thick {
+#yfqojnclco .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#slaspbxyxo .gt_last_summary_row {
+#yfqojnclco .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2952,7 +2837,7 @@ anova_tidy5 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_grand_summary_row {
+#yfqojnclco .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -2962,7 +2847,7 @@ anova_tidy5 %>%
   padding-right: 5px;
 }
 
-#slaspbxyxo .gt_first_grand_summary_row {
+#yfqojnclco .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2972,7 +2857,7 @@ anova_tidy5 %>%
   border-top-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_last_grand_summary_row_top {
+#yfqojnclco .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -2982,11 +2867,11 @@ anova_tidy5 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_striped {
+#yfqojnclco .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#slaspbxyxo .gt_table_body {
+#yfqojnclco .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -2995,7 +2880,7 @@ anova_tidy5 %>%
   border-bottom-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_footnotes {
+#yfqojnclco .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -3009,7 +2894,7 @@ anova_tidy5 %>%
   border-right-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_footnote {
+#yfqojnclco .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -3018,7 +2903,7 @@ anova_tidy5 %>%
   padding-right: 5px;
 }
 
-#slaspbxyxo .gt_sourcenotes {
+#yfqojnclco .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -3032,7 +2917,7 @@ anova_tidy5 %>%
   border-right-color: #D3D3D3;
 }
 
-#slaspbxyxo .gt_sourcenote {
+#yfqojnclco .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -3040,72 +2925,72 @@ anova_tidy5 %>%
   padding-right: 5px;
 }
 
-#slaspbxyxo .gt_left {
+#yfqojnclco .gt_left {
   text-align: left;
 }
 
-#slaspbxyxo .gt_center {
+#yfqojnclco .gt_center {
   text-align: center;
 }
 
-#slaspbxyxo .gt_right {
+#yfqojnclco .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#slaspbxyxo .gt_font_normal {
+#yfqojnclco .gt_font_normal {
   font-weight: normal;
 }
 
-#slaspbxyxo .gt_font_bold {
+#yfqojnclco .gt_font_bold {
   font-weight: bold;
 }
 
-#slaspbxyxo .gt_font_italic {
+#yfqojnclco .gt_font_italic {
   font-style: italic;
 }
 
-#slaspbxyxo .gt_super {
+#yfqojnclco .gt_super {
   font-size: 65%;
 }
 
-#slaspbxyxo .gt_footnote_marks {
+#yfqojnclco .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#slaspbxyxo .gt_asterisk {
+#yfqojnclco .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#slaspbxyxo .gt_indent_1 {
+#yfqojnclco .gt_indent_1 {
   text-indent: 5px;
 }
 
-#slaspbxyxo .gt_indent_2 {
+#yfqojnclco .gt_indent_2 {
   text-indent: 10px;
 }
 
-#slaspbxyxo .gt_indent_3 {
+#yfqojnclco .gt_indent_3 {
   text-indent: 15px;
 }
 
-#slaspbxyxo .gt_indent_4 {
+#yfqojnclco .gt_indent_4 {
   text-indent: 20px;
 }
 
-#slaspbxyxo .gt_indent_5 {
+#yfqojnclco .gt_indent_5 {
   text-indent: 25px;
 }
 
-#slaspbxyxo .katex-display {
+#yfqojnclco .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#slaspbxyxo div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#yfqojnclco div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -3122,20 +3007,20 @@ anova_tidy5 %>%
     </tr>
   </thead>
   <tbody class="gt_table_body">
-    <tr><td headers="term" class="gt_row gt_left">log10(1/CV) ~ log10(balance_f)</td>
-<td headers="df.residual" class="gt_row gt_right">241</td>
-<td headers="rss" class="gt_row gt_right">5.543171</td>
+    <tr><td headers="term" class="gt_row gt_left">log10(stability) ~ log10(balance_f) + scale(nutrients) * scale(temperature) + richness</td>
+<td headers="df.residual" class="gt_row gt_right">236</td>
+<td headers="rss" class="gt_row gt_right">3.624661</td>
 <td headers="df" class="gt_row gt_right">NA</td>
 <td headers="sumsq" class="gt_row gt_right">NA</td>
 <td headers="statistic" class="gt_row gt_right">NA</td>
 <td headers="p.value" class="gt_row gt_right">NA</td></tr>
-    <tr><td headers="term" class="gt_row gt_left">log10(1/CV) ~ log10(balance_f) + log10(balance_r)</td>
-<td headers="df.residual" class="gt_row gt_right">240</td>
-<td headers="rss" class="gt_row gt_right">5.522059</td>
+    <tr><td headers="term" class="gt_row gt_left">log10(stability) ~ log10(balance_f) + log10(balance_r) + scale(nutrients) * scale(temperature) + richness</td>
+<td headers="df.residual" class="gt_row gt_right">235</td>
+<td headers="rss" class="gt_row gt_right">3.609549</td>
 <td headers="df" class="gt_row gt_right">1</td>
-<td headers="sumsq" class="gt_row gt_right">0.02111215</td>
-<td headers="statistic" class="gt_row gt_right">0.9175772</td>
-<td headers="p.value" class="gt_row gt_right">0.339</td></tr>
+<td headers="sumsq" class="gt_row gt_right">0.01511231</td>
+<td headers="statistic" class="gt_row gt_right">0.9838881</td>
+<td headers="p.value" class="gt_row gt_right">0.322</td></tr>
   </tbody>
   
   
@@ -3143,47 +3028,23 @@ anova_tidy5 %>%
 </div>
 ```
 
-**Table 7**: Linear model results for the interaction between balance and type (fundamental vs realised) as predictors of stability for richness level.
-<table class="table" style="color: black; width: auto !important; margin-left: auto; margin-right: auto;">
- <thead>
-  <tr>
-   <th style="text-align:left;"> model </th>
-   <th style="text-align:right;"> AIC </th>
-   <th style="text-align:right;"> AICc </th>
-   <th style="text-align:right;"> BIC </th>
-   <th style="text-align:right;"> R2 </th>
-   <th style="text-align:right;"> R2_adjusted </th>
-   <th style="text-align:right;"> RMSE </th>
-   <th style="text-align:right;"> Sigma </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td style="text-align:left;"> 1 </td>
-   <td style="text-align:right;"> 453.8407 </td>
-   <td style="text-align:right;"> 453.9411 </td>
-   <td style="text-align:right;"> 464.3198 </td>
-   <td style="text-align:right;"> 0.1917679 </td>
-   <td style="text-align:right;"> 0.1884142 </td>
-   <td style="text-align:right;"> 0.1510344 </td>
-   <td style="text-align:right;"> 0.1516599 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> 2 </td>
-   <td style="text-align:right;"> 454.9134 </td>
-   <td style="text-align:right;"> 455.0814 </td>
-   <td style="text-align:right;"> 468.8856 </td>
-   <td style="text-align:right;"> 0.1948462 </td>
-   <td style="text-align:right;"> 0.1881365 </td>
-   <td style="text-align:right;"> 0.1507466 </td>
-   <td style="text-align:right;"> 0.1516858 </td>
-  </tr>
-</tbody>
-</table>
-
-A model with both fundamental and realised balance as predictors improved very little the variance explained by the model.
 
 
+A model with both fundamental and realised imbalance as predictors improved very little the variance explained by the model. The two models are not significantly different, suggesting that fundamental imbalance captures well the effect of imbalance on stability, and addiing the species contribution to total biomass (realised imbalnce) does not improved the model.
+
+We now compare also the AIC of the two models
+
+``` r
+AIC(lm_full_int1, lm_full_int2)
+```
+
+```
+##              df       AIC
+## lm_full_int1  8 -316.2839
+## lm_full_int2  9 -315.2992
+```
+
+The AIC of the model with only fundamental imbalance is lower than the AIC of the model with both fundamental and realised imbalance, suggesting that the model with only fundamental imbalance is a better model. However, the difference is very small. 
 
 
 # Linear models
@@ -3194,68 +3055,60 @@ A model with both fundamental and realised balance as predictors improved very l
 We may expect and interactive effect of the environmental variables on stability. We thus build a linear model with interaction between temperature and nutrients.
 However, there is high collinearity between temperature and nutrients, which may affect the model results. 
 
-<!-- ```{r model_check_int, fig.cap='model check 1.', fig.align="center", fig.height=9, fig.width=12, include=TRUE, echo=TRUE} -->
-<!-- lm_full_int<-lm(data=complete_aggr,log10(stability)~log10(balance_f)+(richness)+nutrients*temperature) -->
 
-<!-- # check model assumptions -->
-<!-- check_model(lm_full_int) -->
-<!-- ``` -->
+``` r
+lm_full_int<-lm(data=complete_aggr,log10(stability)~log10(balance_f)+(richness)+nutrients*temperature)
 
+# check model assumptions
+check_model(lm_full_int)
+```
+
+<div class="figure" style="text-align: center">
+<img src="Extended_results_files/figure-html/model_check_int-1.png" alt="model check 1."  />
+<p class="caption">(\#fig:model_check_int)model check 1.</p>
+</div>
+Assumptions not met.
 
 So we transformed nutrients and temperature to numeric, and transformed temperature regimes in values = 1, 2, 3. Then, we centered the variables to avoid collinearity with the interaction term. 
 
 
 ``` r
-# transform nutrients and temperature to numeric. For this the units need to be removed, and temperature regimes should be transformed in values = 1, 2, 3
-complete_aggr_2<- complete_aggr %>%
-  # Remove the units from the 'nutrients' and 'temperature' columns
-  mutate(
-    nutrients = as.numeric(gsub(" g/L", "", nutrients)),  # Convert nutrients to numeric
-    temperature = gsub(" °C", "", temperature)            # Remove the unit but keep as character
-  ) %>%
-  # Convert temperature ranges to numeric codes using case_when
-  mutate(
-    temperature = case_when(
-      temperature == "18-21" ~ 1,
-      temperature == "22-25" ~ 2,
-      temperature == "25-28" ~ 3,
-      TRUE ~ NA_real_         # Handle unexpected values with NA
-    )
-  )
-
-
 # Fit the linear model with interaction
 lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nutrients)*scale(temperature)+richness)
 
 # check model assumptions
-# check_model(lm_full_int)
-
-#summary(lm_full_int)
+ check_model(lm_full_int)
 ```
 
+<div class="figure" style="text-align: center">
+<img src="Extended_results_files/figure-html/model_check_int2-1.png" alt="model check 1."  />
+<p class="caption">(\#fig:model_check_int2)model check 1.</p>
+</div>
+
+Assumptions met.
 
 
 
 **Table 8**: Linear model results for the effects of balance, richness, nutrients, and temperature on community stability. Estimates are presented with 95% confidence intervals and p-values. 
 
 ```{=html}
-<div id="myxsenqbwx" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#myxsenqbwx table {
+<div id="zvkjmrowob" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#zvkjmrowob table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#myxsenqbwx thead, #myxsenqbwx tbody, #myxsenqbwx tfoot, #myxsenqbwx tr, #myxsenqbwx td, #myxsenqbwx th {
+#zvkjmrowob thead, #zvkjmrowob tbody, #zvkjmrowob tfoot, #zvkjmrowob tr, #zvkjmrowob td, #zvkjmrowob th {
   border-style: none;
 }
 
-#myxsenqbwx p {
+#zvkjmrowob p {
   margin: 0;
   padding: 0;
 }
 
-#myxsenqbwx .gt_table {
+#zvkjmrowob .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -3281,12 +3134,12 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-left-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_caption {
+#zvkjmrowob .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#myxsenqbwx .gt_title {
+#zvkjmrowob .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -3298,7 +3151,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-bottom-width: 0;
 }
 
-#myxsenqbwx .gt_subtitle {
+#zvkjmrowob .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -3310,7 +3163,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-top-width: 0;
 }
 
-#myxsenqbwx .gt_heading {
+#zvkjmrowob .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -3322,13 +3175,13 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-right-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_bottom_border {
+#zvkjmrowob .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_col_headings {
+#zvkjmrowob .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -3343,7 +3196,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-right-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_col_heading {
+#zvkjmrowob .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3363,7 +3216,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   overflow-x: hidden;
 }
 
-#myxsenqbwx .gt_column_spanner_outer {
+#zvkjmrowob .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3375,15 +3228,15 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   padding-right: 4px;
 }
 
-#myxsenqbwx .gt_column_spanner_outer:first-child {
+#zvkjmrowob .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#myxsenqbwx .gt_column_spanner_outer:last-child {
+#zvkjmrowob .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#myxsenqbwx .gt_column_spanner {
+#zvkjmrowob .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -3395,11 +3248,11 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   width: 100%;
 }
 
-#myxsenqbwx .gt_spanner_row {
+#zvkjmrowob .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#myxsenqbwx .gt_group_heading {
+#zvkjmrowob .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3425,7 +3278,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   text-align: left;
 }
 
-#myxsenqbwx .gt_empty_group_heading {
+#zvkjmrowob .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -3440,15 +3293,15 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   vertical-align: middle;
 }
 
-#myxsenqbwx .gt_from_md > :first-child {
+#zvkjmrowob .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#myxsenqbwx .gt_from_md > :last-child {
+#zvkjmrowob .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#myxsenqbwx .gt_row {
+#zvkjmrowob .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3467,7 +3320,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   overflow-x: hidden;
 }
 
-#myxsenqbwx .gt_stub {
+#zvkjmrowob .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3480,7 +3333,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   padding-right: 5px;
 }
 
-#myxsenqbwx .gt_stub_row_group {
+#zvkjmrowob .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3494,15 +3347,15 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   vertical-align: top;
 }
 
-#myxsenqbwx .gt_row_group_first td {
+#zvkjmrowob .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#myxsenqbwx .gt_row_group_first th {
+#zvkjmrowob .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#myxsenqbwx .gt_summary_row {
+#zvkjmrowob .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -3512,16 +3365,16 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   padding-right: 5px;
 }
 
-#myxsenqbwx .gt_first_summary_row {
+#zvkjmrowob .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_first_summary_row.thick {
+#zvkjmrowob .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#myxsenqbwx .gt_last_summary_row {
+#zvkjmrowob .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3531,7 +3384,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-bottom-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_grand_summary_row {
+#zvkjmrowob .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -3541,7 +3394,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   padding-right: 5px;
 }
 
-#myxsenqbwx .gt_first_grand_summary_row {
+#zvkjmrowob .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3551,7 +3404,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-top-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_last_grand_summary_row_top {
+#zvkjmrowob .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3561,11 +3414,11 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-bottom-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_striped {
+#zvkjmrowob .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#myxsenqbwx .gt_table_body {
+#zvkjmrowob .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -3574,7 +3427,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-bottom-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_footnotes {
+#zvkjmrowob .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -3588,7 +3441,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-right-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_footnote {
+#zvkjmrowob .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -3597,7 +3450,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   padding-right: 5px;
 }
 
-#myxsenqbwx .gt_sourcenotes {
+#zvkjmrowob .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -3611,7 +3464,7 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   border-right-color: #D3D3D3;
 }
 
-#myxsenqbwx .gt_sourcenote {
+#zvkjmrowob .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -3619,72 +3472,72 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
   padding-right: 5px;
 }
 
-#myxsenqbwx .gt_left {
+#zvkjmrowob .gt_left {
   text-align: left;
 }
 
-#myxsenqbwx .gt_center {
+#zvkjmrowob .gt_center {
   text-align: center;
 }
 
-#myxsenqbwx .gt_right {
+#zvkjmrowob .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#myxsenqbwx .gt_font_normal {
+#zvkjmrowob .gt_font_normal {
   font-weight: normal;
 }
 
-#myxsenqbwx .gt_font_bold {
+#zvkjmrowob .gt_font_bold {
   font-weight: bold;
 }
 
-#myxsenqbwx .gt_font_italic {
+#zvkjmrowob .gt_font_italic {
   font-style: italic;
 }
 
-#myxsenqbwx .gt_super {
+#zvkjmrowob .gt_super {
   font-size: 65%;
 }
 
-#myxsenqbwx .gt_footnote_marks {
+#zvkjmrowob .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#myxsenqbwx .gt_asterisk {
+#zvkjmrowob .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#myxsenqbwx .gt_indent_1 {
+#zvkjmrowob .gt_indent_1 {
   text-indent: 5px;
 }
 
-#myxsenqbwx .gt_indent_2 {
+#zvkjmrowob .gt_indent_2 {
   text-indent: 10px;
 }
 
-#myxsenqbwx .gt_indent_3 {
+#zvkjmrowob .gt_indent_3 {
   text-indent: 15px;
 }
 
-#myxsenqbwx .gt_indent_4 {
+#zvkjmrowob .gt_indent_4 {
   text-indent: 20px;
 }
 
-#myxsenqbwx .gt_indent_5 {
+#zvkjmrowob .gt_indent_5 {
   text-indent: 25px;
 }
 
-#myxsenqbwx .katex-display {
+#zvkjmrowob .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#myxsenqbwx div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#zvkjmrowob div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -3750,35 +3603,34 @@ lm_full_int<-lm(data=complete_aggr_2,log10(stability)~log10(balance_f)+scale(nut
 ```
 
 
-The relationship between community stability and the predictors, including balance, nutrient and temperature levels, and species richness, was analyzed using a linear model (Table 1). Overall, the model explained 47.2% of the variation in community stability (adjusted R2 = 0.4581, F6,236 = 35.09, p<2.2×10−16).
-The results showed that the balance of species' responses to environmental conditions (log10(balancef)had a small but significant negative effect on stability.
-
+The relationship between community stability and the predictors, including imbalance, nutrient and temperature levels, and species richness, was analyzed using a linear model. Overall, the model explained 47.2% of the variation in community stability (adjusted R2 = 0.4581, F6,236 = 35.09, p<2.2×10−16).
+The results showed that the balance of species' responses to environmental conditions (log10(imbalancef) had a small but significant negative effect on stability.
 Nutrient availability had a strong, positive effect on community stability (β=0.088±0.0088, p<2×10−16p. 
 In contrast, temperature significantly reduced stability (β=−0.049±0.0100.010β=−0.049±0.010, p=6.14×10−6).
-Species richness had mixed effects on stability. Communities with richness of three species exhibited significantly lower stability compared to the reference group (β=−0.042±0.019, p=0.0323). However, richness of four species did not significantly affect stability (β=−0.016±0.020, p=0.416).
+Species richness had no significant effect on stability.
 The interaction between nutrients and temperature was not statistically significant (β=−0.011±0.009, p=0.195), suggesting that their combined effects on stability were negligible under the tested conditions.
 
 **Table 9**: ANOVA table of the model with interaction between temperature and nutrients as predictors of stability.
 
 
 ```{=html}
-<div id="jwajzydngy" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#jwajzydngy table {
+<div id="jhefkiofoy" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#jhefkiofoy table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#jwajzydngy thead, #jwajzydngy tbody, #jwajzydngy tfoot, #jwajzydngy tr, #jwajzydngy td, #jwajzydngy th {
+#jhefkiofoy thead, #jhefkiofoy tbody, #jhefkiofoy tfoot, #jhefkiofoy tr, #jhefkiofoy td, #jhefkiofoy th {
   border-style: none;
 }
 
-#jwajzydngy p {
+#jhefkiofoy p {
   margin: 0;
   padding: 0;
 }
 
-#jwajzydngy .gt_table {
+#jhefkiofoy .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -3804,12 +3656,12 @@ The interaction between nutrients and temperature was not statistically signific
   border-left-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_caption {
+#jhefkiofoy .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#jwajzydngy .gt_title {
+#jhefkiofoy .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -3821,7 +3673,7 @@ The interaction between nutrients and temperature was not statistically signific
   border-bottom-width: 0;
 }
 
-#jwajzydngy .gt_subtitle {
+#jhefkiofoy .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -3833,7 +3685,7 @@ The interaction between nutrients and temperature was not statistically signific
   border-top-width: 0;
 }
 
-#jwajzydngy .gt_heading {
+#jhefkiofoy .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -3845,13 +3697,13 @@ The interaction between nutrients and temperature was not statistically signific
   border-right-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_bottom_border {
+#jhefkiofoy .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_col_headings {
+#jhefkiofoy .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -3866,7 +3718,7 @@ The interaction between nutrients and temperature was not statistically signific
   border-right-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_col_heading {
+#jhefkiofoy .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3886,7 +3738,7 @@ The interaction between nutrients and temperature was not statistically signific
   overflow-x: hidden;
 }
 
-#jwajzydngy .gt_column_spanner_outer {
+#jhefkiofoy .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -3898,15 +3750,15 @@ The interaction between nutrients and temperature was not statistically signific
   padding-right: 4px;
 }
 
-#jwajzydngy .gt_column_spanner_outer:first-child {
+#jhefkiofoy .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#jwajzydngy .gt_column_spanner_outer:last-child {
+#jhefkiofoy .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#jwajzydngy .gt_column_spanner {
+#jhefkiofoy .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -3918,11 +3770,11 @@ The interaction between nutrients and temperature was not statistically signific
   width: 100%;
 }
 
-#jwajzydngy .gt_spanner_row {
+#jhefkiofoy .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#jwajzydngy .gt_group_heading {
+#jhefkiofoy .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -3948,7 +3800,7 @@ The interaction between nutrients and temperature was not statistically signific
   text-align: left;
 }
 
-#jwajzydngy .gt_empty_group_heading {
+#jhefkiofoy .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -3963,15 +3815,15 @@ The interaction between nutrients and temperature was not statistically signific
   vertical-align: middle;
 }
 
-#jwajzydngy .gt_from_md > :first-child {
+#jhefkiofoy .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#jwajzydngy .gt_from_md > :last-child {
+#jhefkiofoy .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#jwajzydngy .gt_row {
+#jhefkiofoy .gt_row {
   padding-top: 10px;
   padding-bottom: 10px;
   padding-left: 5px;
@@ -3990,7 +3842,7 @@ The interaction between nutrients and temperature was not statistically signific
   overflow-x: hidden;
 }
 
-#jwajzydngy .gt_stub {
+#jhefkiofoy .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -4003,7 +3855,7 @@ The interaction between nutrients and temperature was not statistically signific
   padding-right: 5px;
 }
 
-#jwajzydngy .gt_stub_row_group {
+#jhefkiofoy .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -4017,15 +3869,15 @@ The interaction between nutrients and temperature was not statistically signific
   vertical-align: top;
 }
 
-#jwajzydngy .gt_row_group_first td {
+#jhefkiofoy .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#jwajzydngy .gt_row_group_first th {
+#jhefkiofoy .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#jwajzydngy .gt_summary_row {
+#jhefkiofoy .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -4035,16 +3887,16 @@ The interaction between nutrients and temperature was not statistically signific
   padding-right: 5px;
 }
 
-#jwajzydngy .gt_first_summary_row {
+#jhefkiofoy .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_first_summary_row.thick {
+#jhefkiofoy .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#jwajzydngy .gt_last_summary_row {
+#jhefkiofoy .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -4054,7 +3906,7 @@ The interaction between nutrients and temperature was not statistically signific
   border-bottom-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_grand_summary_row {
+#jhefkiofoy .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -4064,7 +3916,7 @@ The interaction between nutrients and temperature was not statistically signific
   padding-right: 5px;
 }
 
-#jwajzydngy .gt_first_grand_summary_row {
+#jhefkiofoy .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -4074,7 +3926,7 @@ The interaction between nutrients and temperature was not statistically signific
   border-top-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_last_grand_summary_row_top {
+#jhefkiofoy .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -4084,11 +3936,11 @@ The interaction between nutrients and temperature was not statistically signific
   border-bottom-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_striped {
+#jhefkiofoy .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#jwajzydngy .gt_table_body {
+#jhefkiofoy .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -4097,7 +3949,7 @@ The interaction between nutrients and temperature was not statistically signific
   border-bottom-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_footnotes {
+#jhefkiofoy .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -4111,7 +3963,7 @@ The interaction between nutrients and temperature was not statistically signific
   border-right-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_footnote {
+#jhefkiofoy .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -4120,7 +3972,7 @@ The interaction between nutrients and temperature was not statistically signific
   padding-right: 5px;
 }
 
-#jwajzydngy .gt_sourcenotes {
+#jhefkiofoy .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -4134,7 +3986,7 @@ The interaction between nutrients and temperature was not statistically signific
   border-right-color: #D3D3D3;
 }
 
-#jwajzydngy .gt_sourcenote {
+#jhefkiofoy .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -4142,72 +3994,72 @@ The interaction between nutrients and temperature was not statistically signific
   padding-right: 5px;
 }
 
-#jwajzydngy .gt_left {
+#jhefkiofoy .gt_left {
   text-align: left;
 }
 
-#jwajzydngy .gt_center {
+#jhefkiofoy .gt_center {
   text-align: center;
 }
 
-#jwajzydngy .gt_right {
+#jhefkiofoy .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#jwajzydngy .gt_font_normal {
+#jhefkiofoy .gt_font_normal {
   font-weight: normal;
 }
 
-#jwajzydngy .gt_font_bold {
+#jhefkiofoy .gt_font_bold {
   font-weight: bold;
 }
 
-#jwajzydngy .gt_font_italic {
+#jhefkiofoy .gt_font_italic {
   font-style: italic;
 }
 
-#jwajzydngy .gt_super {
+#jhefkiofoy .gt_super {
   font-size: 65%;
 }
 
-#jwajzydngy .gt_footnote_marks {
+#jhefkiofoy .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#jwajzydngy .gt_asterisk {
+#jhefkiofoy .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#jwajzydngy .gt_indent_1 {
+#jhefkiofoy .gt_indent_1 {
   text-indent: 5px;
 }
 
-#jwajzydngy .gt_indent_2 {
+#jhefkiofoy .gt_indent_2 {
   text-indent: 10px;
 }
 
-#jwajzydngy .gt_indent_3 {
+#jhefkiofoy .gt_indent_3 {
   text-indent: 15px;
 }
 
-#jwajzydngy .gt_indent_4 {
+#jhefkiofoy .gt_indent_4 {
   text-indent: 20px;
 }
 
-#jwajzydngy .gt_indent_5 {
+#jhefkiofoy .gt_indent_5 {
   text-indent: 25px;
 }
 
-#jwajzydngy .katex-display {
+#jhefkiofoy .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#jwajzydngy div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#jhefkiofoy div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -4277,10 +4129,10 @@ The interaction between nutrients and temperature was not statistically signific
 
 
 # Asynchrony
-Response diversity (aka balance) has been suggested as a mechanism that promotes temporal stability of community biomass by promoting species asynchrony.
+Response diversity (one of the stabilisng effects captured by imbalance) has been suggested as a mechanism that promotes temporal stability of community biomass by promoting species asynchrony.
 
-We thus calculated the asynchrony index suggested by [Gross et al. 2014](https://www.journals.uchicago.edu/doi/epdf/10.1086/673915) to calculate the effect of asynchrony on temporal stability and to see how reponse diversity relate to asynchrony.
-The index ranges between -1 and 1, with -1 indicating perfect asyncrony and 1 being perfectly synchronous, and 0 indicating random variation.
+We thus calculated the asynchrony index suggested by [Gross et al. 2014](https://www.journals.uchicago.edu/doi/epdf/10.1086/673915) to calculate the effect of asynchrony on temporal stability and to see how response diversity relate to asynchrony.
+The index ranges between -1 and 1, with -1 indicating perfect asynchrony and 1 being perfectly synchronous, and 0 indicating random variation.
 
 
 
@@ -4314,12 +4166,12 @@ cor.test((-1*async_aggr$synchrony_Gross),async_aggr$stability)
 ```
 
 
-### Plot Asynchrony Gross vs fundamental balance
+### Plot Asynchrony Gross vs fundamental imbalance
 
 <img src="Extended_results_files/figure-html/async-1.png" style="display: block; margin: auto;" />
-**Figure 9**: Relationship between asynchrony (Gross) and fundamental balance divided by nutrient level.
+**Figure 9**: Relationship between asynchrony (Gross) and fundamental imbalance divided by nutrient level.
 
-The Pearson's correlation between asynchrony and balance is significant (estimate = 18, p = 0.003).
+The Pearson's correlation between asynchrony and imbalance is significant (estimate = 18, p = 0.003).
 
 ``` r
 cor.test((-1*async_aggr$synchrony_Gross),(async_aggr$balance_f))
@@ -4341,71 +4193,58 @@ cor.test((-1*async_aggr$synchrony_Gross),(async_aggr$balance_f))
 
 <!-- ```{r fig.align="center", fig.height=12, fig.width=16} -->
 
-<!-- plot_asynch_CV_G <- plot_asynch_CV_G + labs(tag = "(a)") -->
-<!-- plot_asynch_B_G <- plot_asynch_B_G + labs(tag = "(b)") -->
+<!-- plot_asynch_CV_G <- plot_asynch_CV_G + -->
+<!--   labs(tag = "(a)") + -->
+<!--   theme(plot.tag = element_text(size = 20)) -->
 
-<!-- fig3 <- plot_asynch_CV_G / plot_asynch_B_G -->
+<!-- plot_asynch_B_G <- plot_asynch_B_G + -->
+<!--   labs(tag = "(b)") + -->
+<!--   theme(plot.tag = element_text(size = 20)) -->
+
+<!-- plot_pop_aggr_balance <- plot_pop_aggr_balance + -->
+<!--   labs(tag = "(c)") + -->
+<!--   theme(plot.tag = element_text(size = 20)) -->
+
+
+
+<!-- fig3 <- plot_asynch_CV_G / plot_asynch_B_G + plot_pop_aggr_balance -->
 <!-- fig3 -->
-<!-- ggsave("figures_ms/fig.3.png", plot = fig3, width = 16, height = 12, dpi = 600) -->
+
+
+
+<!-- #ggsave("figures_ms/fig.3.png", plot = fig3, width = 14, height = 12, dpi = 600) -->
 <!-- ``` -->
 
 
 
+## Eveness
+Evenness in species biomass has been identified as an important factor potentially influencing ecosystem stability [Thibaut & Connolly 2013](https://onlinelibrary.wiley.com/doi/full/10.1111/ele.12019). In the context of our experiment, evenness in species biomass could help explaining why there is little difference between fundamental and realized imbalance. If evenness is high, then all species contribute similarly to total biomass. In this case, weighting for species-biomass contribution to total biomass (realized), should not fundamentally change the result, compared to an un-weighted (fundamental) measurement. 
+![](Extended_results_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
+**Figure 10**: Distribution of species evenness across experimental communities. The histogram represents the frequency of observed evenness values, while the red dashed line indicates the mean evenness (0.7). This highlights the central tendency of evenness across the dataset and its variation among communities.
 
+Evenness was indeed generally high in our experimental communities, suggesting another potential factor reducing the potential difference between fundamental and realized balance. 
 
 # Population stability
 
-The relationship between community stability and the stability of the individual populations that make up the community is a key question in community ecology. Importantly, community stability can result from low population stability, if populations fluctuate asynchronously, or from high population stability, if populations do not fluctuate much.
+The relationship between community stability and the stability of the individual populations that make up the community is a key question in ecology. Importantly, ecosystem stability can result from low population stability, if populations fluctuate asynchronously, or from high population stability, if populations do not fluctuate much.
 Synthesis of the literature suggests diversity can have a positive or negantive effect on population stability [Campbell et al 2010](https://nsojournals.onlinelibrary.wiley.com/doi/full/10.1111/j.1600-0706.2010.18768.x) and (Xu et al 2021)[https://onlinelibrary.wiley.com/doi/full/10.1111/ele.13777].
 
-Theoretical work has suggested that community stability is a product of two quantities: the (a)synchrony of population fluctuations, and an average species-level population stability that is weighted by relative abundance [Thibaut & Connolly 2013](https://onlinelibrary.wiley.com/doi/full/10.1111/ele.12019). 
+Theoretical work has suggested that community stability is a product of two quantities: the (a) synchrony of population fluctuations, and an average species-level population stability that is weighted by relative abundance [Thibaut & Connolly 2013](https://onlinelibrary.wiley.com/doi/full/10.1111/ele.12019). 
 
-Critically, a balance value close to zero can result from high response diversity, but also from high population stability (population biomass does not change largely over time).
-We want to look now at whether our new metric of balance can capture these two stabilising mechanisms.
+Critically, a imbalance value close to zero can result from high response diversity, but also from high population stability (population biomass does not change largely over time).
+We want to look now at whether our new metric of imbalance can capture these two stabilising mechanisms.
 
-Thus, we first calculate species-level population stability weighted by relative abundance. 
+Thus, we calculate species-level population stability weighted by relative abundance and look at how it relates to ecosystem stability. 
 
-![](Extended_results_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
+![](Extended_results_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
+**Figure 11**: Relationship between log10 of population stability and log 10 of ecosystem stability.  
 
-
-<!-- ```{r include=TRUE, echo=TRUE} -->
-<!-- lm_pop<-lm(data=pop_aggr,log10(1/w_pop_CV)~log10(balance_f)+(richness)+nutrients+temperature) -->
-
-<!-- # check model assumptions -->
-<!--  check_model(lm_pop) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- summary(lm_pop) -->
-<!-- car::Anova(lm_pop, type = "II") -->
-<!-- <!-- ``` --> -->
-
-
-<!--  ```{r} -->
-<!--  plot_R_complete_pop<-ggplot(data=pop_aggr)+ -->
-<!--    geom_boxplot(aes(y=log10(1/w_pop_CV),x=richness))+ -->
-<!--    geom_jitter(aes(y=log10(1/w_pop_CV),x=richness)) -->
-
-
-
-<!-- plot_R_complete<-ggplot(data=pop_aggr)+ -->
-<!--    geom_boxplot(aes(y=log10(1/w_pop_CV),x=richness))+ -->
-<!--   geom_jitter(aes(y=log10(1/w_pop_CV),x=richness)) -->
-
-<!--  plot_R_complete<-ggplot(data=pop_aggr)+theme_bw(base_size = 25)+ -->
-<!--    geom_quasirandom(data= pop_aggr,aes(y=log10(1/w_pop_CV), x=richness, group=richness, colour=as.factor(richness)), -->
-<!--                                    dodge.width=2, size=4) + -->
-<!--   xlab("Richness")+ -->
-<!--   theme(legend.position = "none", -->
-<!--         axis.title.y = element_blank())+   scale_color_viridis_d(option = "inferno", begin = 0.2, end = 0.8)+ -->
-<!--    labs (tag = "(a)") -->
-<!--  ``` -->
 
 
 # SEM 
 
 
-Finally, we use a structural equation model (SEM) to explore how stability is influenced by asynchrony, population stability, balance and, nutrient levels. 
+Finally, we use a structural equation model (SEM) to explore how stability is influenced by asynchrony, population stability, imbalance and, nutrient levels. 
 In order to develop a hypothesis regarding the influence of stability, we have drawn on existing literature. This has enabled us to posit that stability is influenced by two key factors: asynchrony and population stability. In turn, these are influenced by balance and, in our particular case, by nutrient levels.
 
 
@@ -4507,7 +4346,7 @@ In order to develop a hypothesis regarding the influence of stability, we have d
 ```
 
 <div class="figure" style="text-align: center">
-<img src="SEM_3.png" alt="SEM." width="8000" />
+<img src="figures_ms/SEM_3.png" alt="SEM." width="6949" />
 <p class="caption">(\#fig:SEM)SEM.</p>
 </div>
 **Model Fit Indices**
@@ -4532,13 +4371,13 @@ Overall, the fit indices suggest that the model is an excellent fit for the data
 
 **Asynchrony_Gross Regressions**
 
-*Asynchrony_Gross ~ Log10(Balance):* The standardized estimate is -0.176 (p = 0.013), indicating a significant negative effect. Higher balance leads to lower asynchrony, suggesting that as balance increases, species within the community fluctuate more synchronously.
+*Asynchrony_Gross ~ Log10(Balance):* The standardized estimate is -0.176 (p = 0.013), indicating a significant negative effect. Higher imbalance leads to lower asynchrony, suggesting that as imbalance increases, species within the community fluctuate more synchronously.
 
 *Asynchrony_Gross ~ Nutrients:* The standardized estimate is -0.469 (p < 0.001), showing a strong negative relationship. Higher nutrient levels appear to reduce asynchrony, possibly by causing similar responses across species.
 
 **Population Stability Regressions**
 
-*Population Stability ~ Log10(Balance)*: The standardized estimate is -0.296 (p < 0.001), indicating that higher balance is associated with lower population stability.
+*Population Stability ~ Log10(Balance)*: The standardized estimate is -0.296 (p < 0.001), indicating that higher imbalance is associated with lower population stability.
 
 *Population Stability ~ Nutrients*: The standardized estimate is 0.635 (p < 0.001), showing that higher nutrient levels are associated with increased population stability, likely because nutrients enhance conditions that support stable population dynamics.
 
@@ -4552,6 +4391,6 @@ Overall, the fit indices suggest that the model is an excellent fit for the data
 *Summary Interpretation*
 Model Fit: The model has an excellent fit, as indicated by the fit indices.
 Stability: Community stability is strongly influenced by both population stability and asynchrony among species, with population stability being the stronger predictor.
-Asynchrony and Balance: Asynchrony decreases with increasing balance and nutrients, suggesting that these factors promote more synchronized fluctuations among species.
-Population Stability and Nutrients: Higher nutrient levels are associated with increased population stability, suggesting that nutrient availability supports stable population dynamics. Conversely, higher balance is associated with decreased population stability.
+Asynchrony and Imbalance: Asynchrony decreases with increasing imbalance and nutrients, suggesting that these factors promote more synchronized fluctuations among species.
+Population Stability and Nutrients: Higher nutrient levels are associated with increased population stability, suggesting that nutrient availability supports stable population dynamics. Conversely, higher imbalance is associated with decreased population stability.
 
