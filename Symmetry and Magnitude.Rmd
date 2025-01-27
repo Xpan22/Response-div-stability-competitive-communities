@@ -165,7 +165,7 @@ summary_stats %>%
   group_by(num_spp) %>%
   mutate(magnitude_rescaled = rescale(balance / num_spp)) %>%
   ggplot(aes(x = symmetry, y = magnitude, color = magnitude_rescaled)) +
-  geom_point() +
+  geom_jitter(width = 0.05) +
   facet_wrap(~num_spp, scales = "free") +
   scale_color_viridis_c(option = "plasma") +
   labs(color = "Rescaled Balance", x = "Symmetry", y = "Magnitude") +
@@ -230,7 +230,7 @@ summary_stats_new <- dd_new %>%
 summary_stats_new %>%
   group_by(num_spp, dist) %>%
   mutate(magnitude_rescaled = rescale(balance / num_spp)) %>%
-  ggplot(aes(x = symmetry, y = magnitude, color = magnitude_rescaled)) +
+  ggplot(aes(x = symmetry, y = magnitude, color = magnitude)) +
   geom_point() +
   facet_grid(num_spp ~ dist, scales = "free") +
   scale_color_viridis_c(option = "plasma") +
@@ -328,6 +328,20 @@ ggplot(mean_check, aes(x = mean_shift, y = mean_rd_vals, color = dist)) +
        y = "Calculated Mean of rd_vals",
        color = "Distribution") +
   theme_bw()
+
+```
+
+```{r}
+summary_stats_updated %>% dplyr::filter(dist == "normal") %>% 
+  group_by(num_spp, dist, mean_shift) %>%
+  mutate(magnitude_rescaled = rescale(balance / num_spp)) %>%
+  ggplot(aes(x = symmetry, y = magnitude, color = magnitude_rescaled)) +
+  geom_jitter(width = 0.05) +
+  facet_wrap(~ mean_shift) +
+  scale_color_viridis_c(option = "plasma") +
+  labs(color = "Rescaled Balance", x = "Symmetry", y = "Magnitude") +
+  theme_bw() +
+  ggtitle("Effect of Mean Shift on Magnitude vs Symmetry")
 
 ```
 
