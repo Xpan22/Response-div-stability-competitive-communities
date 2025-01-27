@@ -1488,10 +1488,10 @@ model1C <- '
   +pop_stability 
  
   asynchrony_Gross ~ log_balance_f + nutrients 
-  pop_stability~log_balance_f + nutrients  + temperature
+  pop_stability~log_balance_f + nutrients  
   
   
-  log_balance_f ~ nutrients + temperature
+
 '
 
 
