@@ -593,7 +593,7 @@ anova_tidy1 %>%
     )
   ) %>%
   tab_options(
-    table.width = px(800),            # Adjust table width (e.g., 400px)
+    table.width = px(600),            # Adjust table width (e.g., 400px)
     table.font.size = px(12),        # Adjust font size (e.g., 12px)
     data_row.padding = px(10)         # Adjust row padding (e.g., 4px for more compact rows)
   )
@@ -632,7 +632,7 @@ anova_tidy2 %>%
     )
   ) %>%
   tab_options(
-    table.width = px(800),            # Adjust table width (e.g., 400px)
+    table.width = px(600),            # Adjust table width (e.g., 400px)
     table.font.size = px(12),        # Adjust font size (e.g., 12px)
     data_row.padding = px(10)         # Adjust row padding (e.g., 4px for more compact rows)
   )
@@ -687,7 +687,7 @@ anova_tidy3 %>%
     )
   ) %>%
   tab_options(
-    table.width = px(800),            # Adjust table width (e.g., 400px)
+    table.width = px(600),            # Adjust table width (e.g., 400px)
     table.font.size = px(12),        # Adjust font size (e.g., 12px)
     data_row.padding = px(10)         # Adjust row padding (e.g., 4px for more compact rows)
   )
@@ -739,7 +739,7 @@ anova_tidy4 %>%
     )
   ) %>%
   tab_options(
-    table.width = px(800),            # Adjust table width (e.g., 400px)
+    table.width = px(600),            # Adjust table width (e.g., 400px)
     table.font.size = px(12),        # Adjust font size (e.g., 12px)
     data_row.padding = px(10)         # Adjust row padding (e.g., 4px for more compact rows)
   )
@@ -870,7 +870,7 @@ anova_tidy5 %>%
     )
   ) %>%
   tab_options(
-    table.width = px(800),            # Adjust table width (e.g., 400px)
+    table.width = px(600),            # Adjust table width (e.g., 400px)
     table.font.size = px(12),        # Adjust font size (e.g., 12px)
     data_row.padding = px(10)         # Adjust row padding (e.g., 4px for more compact rows)
   )
@@ -1215,7 +1215,7 @@ anova_tidyF %>%
     )
   ) %>%
   tab_options(
-    table.width = px(800),            # Adjust table width (e.g., 400px)
+    table.width = px(600),            # Adjust table width (e.g., 400px)
     table.font.size = px(20),        # Adjust font size (e.g., 12px)
     data_row.padding = px(10)         # Adjust row padding (e.g., 4px for more compact rows)
   )
