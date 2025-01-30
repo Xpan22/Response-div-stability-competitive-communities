@@ -1,7 +1,18 @@
 ---
 title: "Species_interaction_analysis"
-output: html_document
 date: "2025-01-27"
+output:
+  bookdown::html_document2:
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    code_folding: hide
+    keep_md: no
+    fig_caption: false  
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE}
@@ -45,7 +56,7 @@ In the present study, we investigated the relative contributions of competitive 
 
 
 # Load data sets
-```{r cars}
+```{r include = FALSE}
 load("Data/complete_ts.RData")
 load("Data/pop_aggr.RData")
 interactions_df <- read_csv("Data/interactions_df.csv")
@@ -55,7 +66,7 @@ interactions_df <- read_csv("Data/interactions_df.csv")
 # Get time of extinction 
 
 Coefficients were only considered for time points where species biomass did not drop below 1/10 of initial biomass
-```{r pressure, echo=FALSE, warning=FALSE, results='hide'}
+```{r include = FALSE}
 #### Remove coefficients of temperature
 
 interactions_df$day[interactions_df$day==0.00]<-60.28
@@ -122,7 +133,7 @@ int_aggr$mean_interaction[is.na(int_aggr$mean_interaction)]=0
 
 
 # Get average interaction coefficient
-```{r echo=FALSE, warning=FALSE, results='hide'}
+```{r warning=FALSE, results='hide', echo=FALSE}
 
 
 bootstrap_mean <- function(data, n_boot = 1000) {
@@ -144,7 +155,7 @@ mean(int_aggr$mean_interaction)
 
 ```
 
-```{r interactions_stab,  fig.align="center", fig.height=6, fig.width=12}
+```{r interactions_stab,  fig.align="center", fig.height=6, fig.width=12, warning=FALSE}
 
 
 
@@ -170,7 +181,7 @@ plot_int_stab
 **Figure 1**: Relationship between mean interaction strength and stability divided by nutrient level.
 
 
-```{r interactions_asynchrony,  fig.align="center", fig.height=6, fig.width=12}
+```{r interactions_asynchrony,  fig.align="center", fig.height=6, fig.width=12, warning=FALSE}
 
 
 
@@ -196,7 +207,7 @@ plot_int_strength
 **Figure 2**: Relationship between mean interaction strength and asynchrony (Gross) divided by nutrient level.
 
 
-```{r interactions_density,  fig.align="center", fig.height=10, fig.width=30}
+```{r interactions_density,  fig.align="center", fig.height=8, fig.width=30, warning=FALSE}
 # plot distribution of mean_interaction faceted by richness, not by nutrients, and use distribution plot with median value
 
 plot_int_temperature<-ggplot(data=int_aggr,aes(x=mean_interaction))+
@@ -240,7 +251,7 @@ plot_int_richness<-ggplot(data=int_aggr,aes(x=mean_interaction))+
   scale_fill_viridis_d(option = "inferno", begin = 0.2, end = 0.8) + labs(tag = "(c)")
 
 
-plot_int_temperature + plot_int_nutrients + plot_int_richness 
+plot_int_temperature + plot_int_nutrients+ plot_int_richness 
 
 
 
@@ -250,7 +261,7 @@ plot_int_temperature + plot_int_nutrients + plot_int_richness
 
 
 # Get residual temperature and nutrients
-```{r echo=FALSE, warning=FALSE, results='hide'}
+```{r echo=FALSE, warning=FALSE, results='hide', warning=FALSE}
 int_aggr2<- int_aggr %>%
   # Remove the units from the 'nutrients' and 'temperature' columns
   mutate(
@@ -282,7 +293,7 @@ int_aggr2<-int_aggr2%>%mutate(resid_temp=resid_temp,resid_nut=resid_nut)
 # Linear mixed effect model
 
 The same model as in the main text, but with interaction coefficient as an additional explanatory variable. Negative interaction coefficients indicate competition while positive indicate facilitation.
-```{r }
+```{r results='hide', warning=FALSE, echo=FALSE}
 model_int<- lmer(log10(stability) ~ log10(balance_f) +  richness + resid_temp * resid_nut+ mean_interaction+
                         (1 | composition), data = int_aggr2, REML = FALSE)
 
@@ -291,7 +302,7 @@ model_int<- lmer(log10(stability) ~ log10(balance_f) +  richness + resid_temp * 
 
 
 **Table 2**: Linear mixed-effects model results for the effects of balance, species interactions, richness, and the residuals of temperature and nutrients on community stability. Estimates are presented with 95% confidence intervals and p-values. 
-```{r}
+```{r  warning=FALSE, echo=FALSE}
 
 
 tbl_summary <- gtsummary::tbl_regression(model_int, intercept = TRUE,

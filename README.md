@@ -24,3 +24,5 @@ Supplementary_info3.Rmd: Analysis of the results of the Empirical Dynamic Modell
 Reports: folder containing the .html and .pdf files generated knitting the supplementary information .Rmd documents
 
 Symmetry and Magnitude.Rmd: contains an exploratory analysis looking at how magnitude and and symmentry (two dimensions of imbalance) change with species richness and distribution of species responses.
+
+Interactions_edm.Rmd: Code to preform the EDM analysis used to estimate species interactions coefficients.
