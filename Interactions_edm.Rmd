@@ -107,7 +107,7 @@ test_df_S<-df_S[12]
 # CCM Analysis
 ```{r pressure, echo=FALSE}
 
-set.seed(290125)
+set.seed(123)
 
 ### Test of causality
 #####################
