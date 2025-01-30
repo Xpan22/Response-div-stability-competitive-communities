@@ -48,7 +48,7 @@ In the present study, we investigated the relative contributions of competitive 
 ```{r cars}
 load("Data/complete_ts.RData")
 load("Data/pop_aggr.RData")
-interactions_df <- read_csv("Data/interactions_df_test.csv")
+interactions_df <- read_csv("Data/interactions_df.csv")
 
 
 ```

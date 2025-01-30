@@ -107,7 +107,7 @@ test_df_S<-df_S[12]
 # CCM Analysis
 ```{r pressure, echo=FALSE}
 
-
+set.seed(290125)
 
 ### Test of causality
 #####################
@@ -286,8 +286,6 @@ return(causl)
 })
 
 
-## safe tests for causality
-#save(rep_CCM,file="/Users/pegroup/Desktop/Til/Data analysis/rep_CCM.RData")
 
 
   
@@ -346,7 +344,7 @@ if(nrow(significant_pairwise_ccm_df)>=1){
 
    sss<-lapply(pred,function(p){
 
-      best_theta<-PredictNonlinear(dataFrame=dftemp,E=length(r$interactor),target=unique(r$target),columns=r$interactor,lib=lib,pred=p,embedded=T)
+      best_theta<-PredictNonlinear(dataFrame=dftemp,E=length(r$interactor),target=unique(r$target),columns=r$interactor,lib=lib,pred=p,embedded=T,showPlot = F)
       theta<-best_theta$Theta[which.max(best_theta$rho)]
       print(theta)
       s<-SMap(dataFrame=dftemp,E=length(r$interactor),target=unique(r$target),columns=r$interactor,theta=theta,lib=lib,pred=p,embedded=T,ignoreNan = T)
